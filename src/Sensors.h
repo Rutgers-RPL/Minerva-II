@@ -132,8 +132,11 @@ class Sensors{
         }
 
         Vec3 readMag(){
-            sBmm150MagData_t magData = bmm150.getGeomagneticData();
-            Quaternion q(magData.x, magData.y, magData.z);
+            uint32_t x = mag.getMeasurementX();
+            uint32_t y = mag.getMeasurementY();
+            uint32_t z = mag.getMeasurementZ();
+            //sBmm150MagData_t magData = mag.getGeomagneticData();
+            Quaternion q(x, y, z);
             q = magRot.rotate(q);
             q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
@@ -141,15 +144,22 @@ class Sensors{
 
 
         float readPressure(){
-            return baro.readPressPa();
+            bmp5_sensor_data data = {0, 0}; 
+            baro.getSensorData(&data);
+            return data.pressure;
         }
 
+        // Converts pressure to feet using the following formula: https://en.wikipedia.org/wiki/Pressure_altitude
         float readAltitude(){
-            return baro.readAltitudeM();
+            float pascal = readPressure();
+            float mbar = pascal/100.0;
+            float feet = 145366.46 * (1 - pow((mbar / 1013.25), 0.190284));
+
+            return feet * 0.3048; //Convert to meters
         }
 
         float readTemperature(){
-            return (baro.readTempC() + accel.getTemperature_C()) / 2.0;
+            return (accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
         }
 
         float readVoltage(){
