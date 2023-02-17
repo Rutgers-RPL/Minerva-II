@@ -49,7 +49,7 @@ unsigned long previousTime = 0;
 
 double am[3];
 double wm[3];
-int count;
+int count = 0;
 int start;
 
 const int led = 13;
@@ -61,12 +61,12 @@ Sensors sen;
 
 void setup() {
   Serial.begin(115200);
-  Serial3.begin(115200);
+  Serial2.begin(115200);
   //while(!Serial) {}
-  while(!Serial3) {}
+  //while(!Serial2) {}
   sen.beginSD();
   Serial.println("test");
-  Serial3.flush();
+  Serial2.flush();
   Serial.println("Starting ...");
 }
 
@@ -75,63 +75,79 @@ long lastTime = micros();
 double threshold = 0.05;
 
 void loop() {
-  if (millis() - blinkCounter >= 500) {
-    if (ledOn) {
-      ledOn = false;
-      digitalWrite(led, LOW);
-    } else {
-      ledOn = true;
-      digitalWrite(led, HIGH);
-    }
-    blinkCounter = millis();
-  }
-
-  /* read the accel */
-  Vec3 acc = sen.readAccel();
-
-  /* read the mag */
-  Vec3 mag = sen.readMag();
-
-  /* read the gyr */
-  Vec3 gyr = sen.readGyro();
-
-  thisahrs.update(acc,gyr,mag);
-  orientation = thisahrs.q;
-
-  Quaternion groundToSensorFrame = orientation;
-
-  realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-                      gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, baro.readAltitudeM(),
-                      (baro.readTempC()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
-
-
-  //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
-
-  data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  if (sen.sdexists && sen.f) {
-    sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-    sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-    sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-    sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-    sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-    sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-    sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  } else {
-    data.code = -1;
-    data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  Vec3 magnetometer_data = sen.readMag();
+  Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
+  Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
+  double pressure_data = sen.readPressure();
+  Serial.println("Pressure Data: "); Serial.println(pressure_data);
+  double altitude = sen.readAltitude();
+  Serial.println("Altitude: "); Serial.println(altitude);
+  double temperatureC = sen.readTemperature();
+  Serial.println("Temperature: "); Serial.println(temperatureC);
+  float longitude = sen.readLongitude();
+  float latitude = sen.readLatitude();
+  Serial.println("Altitude (Latitude, Longitude):");
+  Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
+  delay(1000);
+
+  // if (millis() - blinkCounter >= 500) {
+  //   if (ledOn) {
+  //     ledOn = false;
+  //     digitalWrite(led, LOW);
+  //   } else {
+  //     ledOn = true;
+  //     digitalWrite(led, HIGH);
+  //   }
+  //   blinkCounter = millis();
+  // }
+
+  // /* read the accel */
+  // Vec3 acc = sen.readAccel();
+
+  // /* read the mag */
+  // Vec3 mag = sen.readMag();
+
+  // /* read the gyr */
+  // Vec3 gyr = sen.readGyro();
+
+  // thisahrs.update(acc,gyr,mag);
+  // orientation = thisahrs.q;
+
+  // Quaternion groundToSensorFrame = orientation;
+
+  // realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
+  //                     gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, sen.readAltitude(),
+  //                     (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
+
+
+  // //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
+
+  // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  }
+  // if (sen.sdexists && sen.f) {
+  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
+  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
+  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
+  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
+  //   sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
+  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
+  // } else {
+  //   data.code = -1;
+  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  
+  // }
 
-  if (count % 15 == 0) {
-    Serial.write((const uint8_t *)&data, sizeof(data));
-    Serial3.write((const uint8_t *)&data, sizeof(data));
+  // if (count % 15 == 0) {
+  //   Serial.write((const uint8_t *)&data, sizeof(data));
+  //   Serial3.write((const uint8_t *)&data, sizeof(data));
 
-    if (sen.sdexists) {
-      sen.f.close();
-      sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-    }
-  }
+  //   if (sen.sdexists) {
+  //     sen.f.close();
+  //     sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+  //   }
+  // }
 
-  count += 1;
+  //count += 1;
 }

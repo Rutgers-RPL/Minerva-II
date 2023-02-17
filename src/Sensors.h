@@ -18,8 +18,8 @@
 const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
 
 const uint8_t batteryPin = 22;
-const uint8_t baro_i2c_address = 0x47;
-const uint8_t gps_i2c_address = 0x11;
+const uint8_t baro_i2c_address = 0x46;
+const uint8_t gps_i2c_address = 0x42;
 
 const uint8_t acc_cs = 37;
 const uint8_t gyr_cs = 36;
@@ -64,7 +64,7 @@ class Sensors{
             allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
 
             int status;
-            status = accel.begin();
+            /*status = accel.begin();
             while (status < 0) {
                 Serial.println("Accel Initialization Error");
                 Serial.println(status);
@@ -77,7 +77,7 @@ class Sensors{
                 Serial.println(status);
                 delay(1000);
                 status = gyro.begin();
-            }
+            }*/
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);
@@ -158,8 +158,19 @@ class Sensors{
             return feet * 0.3048; //Convert to meters
         }
 
+        //Parse string to get latitude and lobgitude
+        float readLatitude() {
+            float lat = gps.getLatitude();
+            return lat;
+        }
+        float readLongitude() {
+            float longitude = gps.getLongitude();
+            return longitude;
+        }
         float readTemperature(){
-            return (accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
+            bmp5_sensor_data data = {0, 0}; 
+            baro.getSensorData(&data);
+            return data.temperature;//(accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
         }
 
         float readVoltage(){
