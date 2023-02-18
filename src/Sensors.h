@@ -64,7 +64,7 @@ class Sensors{
             allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
 
             int status;
-            /*status = accel.begin();
+            status = accel.begin();
             while (status < 0) {
                 Serial.println("Accel Initialization Error");
                 Serial.println(status);
@@ -77,7 +77,7 @@ class Sensors{
                 Serial.println(status);
                 delay(1000);
                 status = gyro.begin();
-            }*/
+            }
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);

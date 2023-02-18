@@ -79,6 +79,12 @@ void loop() {
   Vec3 magnetometer_data = sen.readMag();
   Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
   Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
+  Vec3 accelerometer_data = sen.readAccel();
+  Serial.println("Accelerometer Data: ");Serial.print(accelerometer_data.x);Serial.print(" ");
+  Serial.print(accelerometer_data.y); Serial.print(" "); Serial.println(accelerometer_data.z);
+  Vec3 gyroscope_data = sen.readGyro();
+  Serial.println("Gyroscope Data: ");Serial.print(gyroscope_data.x);Serial.print(" ");
+  Serial.print(gyroscope_data.x); Serial.print(" "); Serial.println(gyroscope_data.x);
   double pressure_data = sen.readPressure();
   Serial.println("Pressure Data: "); Serial.println(pressure_data);
   double altitude = sen.readAltitude();
