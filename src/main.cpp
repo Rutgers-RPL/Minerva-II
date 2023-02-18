@@ -91,11 +91,11 @@ void loop() {
   Serial.println("Altitude: "); Serial.println(altitude);
   double temperatureC = sen.readTemperature();
   Serial.println("Temperature: "); Serial.println(temperatureC);
-  float longitude = sen.readLongitude();
-  float latitude = sen.readLatitude();
-  Serial.println("Altitude (Latitude, Longitude):");
-  Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
-  delay(1000);
+  // float longitude = sen.readLongitude();
+  // float latitude = sen.readLatitude();
+  // Serial.println("Altitude (Latitude, Longitude):");
+  // Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
+  delay(10);
 
   // if (millis() - blinkCounter >= 500) {
   //   if (ledOn) {

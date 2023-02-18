@@ -100,6 +100,7 @@ class Sensors{
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
+            mag.performResetOperation();
 
             status = gps.begin(Wire2, gps_i2c_address);
             while (!status) {
