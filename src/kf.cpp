@@ -40,11 +40,10 @@ void KalmanFilter::update(float dt, float position) {
     BLA::Matrix<1> pos = {position};
     BLA::Matrix<1> y = pos - this->H * this->Xp;
     BLA::Matrix<1> S = this->H * (this->Pp * ~this->H) + this->R;
-    BLA::Matrix<3> K = this->Pp * (~this->H * BLA::Invert(S));
+    BLA::Matrix<3> K = this->Pp * (~this->H * BLA::Inverse(S));
 
     this->X = this->Xp + K * y;
     this->P = (this->I - K * this->H) * (this->Pp * ~(this->I - K * this->H) + K * (this->R * ~K));
-    Serial.println(X(0,0));
     this->Xp = this->X;
     this->Pp = this->P;
 }

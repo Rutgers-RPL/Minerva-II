@@ -58,8 +58,8 @@ class Sensors{
             short y = readShort(2);
             short z = readShort(4);
 
-            magRot = Quaternion::from_euler_rotation(0, 0, 0);
-            magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
+            // magRot = Quaternion::from_euler_rotation(0, 0, 0);
+            // magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
             allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
 
             int status;
@@ -122,7 +122,7 @@ class Sensors{
         Vec3 readAccel(){
             /* read the accel */
             accel.readSensor();
-            Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(),-1.0 * accel.getAccelZ_mss());
+            Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(), accel.getAccelZ_mss());
             //q = imuRot.rotate(q);
             //q = allRot.rotate(q);
 
@@ -132,16 +132,16 @@ class Sensors{
         Vec3 readGyro(){
             gyro.readSensor();
 
-            Quaternion q(gyro.getGyroX_rads(),gyro.getGyroY_rads(),gyro.getGyroZ_rads());
-            q = imuRot.rotate(q);
-            q = allRot.rotate(q);
+            Quaternion q(gyro.getGyroX_rads(), gyro.getGyroY_rads(), gyro.getGyroZ_rads());
+            // q = imuRot.rotate(q);
+            // q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
         }
 
         Vec3 readMag(){
             uint32_t x = mag.getMeasurementX();
             uint32_t y = mag.getMeasurementY();
-            uint32_t z = mag.getMeasurementZ();
+            uint32_t z = -1.0 * mag.getMeasurementZ();
             //sBmm150MagData_t magData = mag.getGeomagneticData();
             Quaternion q(x, y, z);
             //q = magRot.rotate(q);

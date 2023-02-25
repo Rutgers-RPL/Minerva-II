@@ -94,30 +94,37 @@ Quaternion orientation = Quaternion();
 double threshold = 0.05;
 
 void loop() {
-  if (micros() - altTime >= 100000) {
-    float alt = sen.readAltitude() - initialAltitude;
-    float acc = sen.readAccel().z + 9.81;
-    bkf.predict((micros() - lastTime) / 1000000.0);
-    bkf.update((micros() - lastTime) / 1000000.0, alt, 0.0, acc);
-    altTime = micros();
-    lastTime = altTime;
-  }
+  // if (micros() - accTime >= 625) {
+  //   bkf.H = {0.0, 0.0, 1.0};
+  //   float acc = thisahrs.aglobal.d;
 
-  if (micros() - printTime >= 100000) {
-    Serial.print(bkf.X(0,0)); Serial.print("\t"); Serial.print(bkf.X(0,1)); Serial.print("\t"); Serial.println(bkf.X(0,2));
-    printTime = micros();
-  }
+  //   kf.predict((micros() - lastTime) / 1000000.0, acc);
+
+  //   bkf.predict((micros() - lastTime) / 1000000.0);
+  //   bkf.update((micros() - lastTime) / 1000000.0, acc);
+  //   accTime = micros();
+  //   lastTime = accTime;
+  // }
+
+  // if (micros() - altTime >= 4167) {
+  //   bkf.H = {1.0, 0.0, 0.0};
+  //   float alt = sen.readAltitude() - initialAltitude;
+
+  //   kf.update((micros() - lastTime) / 1000000.0, alt);
+
+  //   bkf.predict((micros() - lastTime) / 1000000.0);
+  //   bkf.update((micros() - lastTime) / 1000000.0, alt);
+  //   altTime = micros();
+  //   lastTime = altTime;
+  // }
+
+  // if (micros() - printTime >= 100000) {
+  //   Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
+  //   Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
+  //   Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
+  //   printTime = micros();
+  // }
   
-
-
-  // Serial.println(kf.X(0,1));
-  // Serial.println(kf.X(0,2));
-  // Serial.println(alt);
-  // Serial.print(acc.x); Serial.print(acc.y); Serial.println(acc.z);
-  // kf.predict();
-  // kf.update();
-
-
   // Vec3 magnetometer_data = sen.readMag();
   // Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
   // Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
@@ -139,62 +146,85 @@ void loop() {
   // Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
   // delay(10);
 
-  // if (millis() - blinkCounter >= 500) {
-  //   if (ledOn) {
-  //     ledOn = false;
-  //     digitalWrite(led, LOW);
-  //   } else {
-  //     ledOn = true;
-  //     digitalWrite(led, HIGH);
-  //   }
-  //   blinkCounter = millis();
-  // }
+  if (millis() - blinkCounter >= 500) {
+    if (ledOn) {
+      ledOn = false;
+      digitalWrite(led, LOW);
+    } else {
+      ledOn = true;
+      digitalWrite(led, HIGH);
+    }
+    blinkCounter = millis();
+  }
 
-  // /* read the accel */
-  // Vec3 acc = sen.readAccel();
-  // /* read the mag */
-  // Vec3 mag = sen.readMag();
+  /* read the accel */
+  Vec3 acc = sen.readAccel();
+  /* read the mag */
+  Vec3 mag = sen.readMag();
 
-  // /* read the gyr */
-  // Vec3 gyr = sen.readGyro();
+  /* read the gyr */
+  Vec3 gyr = sen.readGyro();
 
-  // thisahrs.update(acc,gyr,mag);
-  // orientation = thisahrs.q;
+  thisahrs.update(acc,gyr,mag);
+  orientation = thisahrs.q;
 
-  // Quaternion groundToSensorFrame = orientation;
+  Quaternion groundToSensorFrame = orientation;
 
+  if (micros() - accTime >= 625) {
+    bkf.H = {0.0, 0.0, 1.0};
+    float acc = thisahrs.aglobal.d;
+
+    kf.predict((micros() - lastTime) / 1000000.0, acc);
+
+    bkf.predict((micros() - lastTime) / 1000000.0);
+    bkf.update((micros() - lastTime) / 1000000.0, acc);
+    accTime = micros();
+    lastTime = accTime;
+  }
+
+  if (micros() - altTime >= 4167) {
+    bkf.H = {1.0, 0.0, 0.0};
+    float alt = sen.readAltitude() - initialAltitude;
+
+    kf.update((micros() - lastTime) / 1000000.0, alt);
+
+    bkf.predict((micros() - lastTime) / 1000000.0);
+    bkf.update((micros() - lastTime) / 1000000.0, alt);
+    altTime = micros();
+    lastTime = altTime;
+  }
   
-  // realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-  //                     gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, sen.readAltitude(),
-  //                     (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
+  realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
+                      gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, bkf.X(0,0),
+                      (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
 
-  // //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
+  //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
 
-  // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  // if (sen.sdexists && sen.f) {
-  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-  //   sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  // } else {
-  //   data.code = -1;
-  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  if (sen.sdexists && sen.f) {
+    sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
+    sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+    sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
+    sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
+    sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
+    sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
+    sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
+  } else {
+    data.code = -1;
+    data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  // }
+  }
 
-  // if (count % 1 == 0) {
-  //   Serial.write((const uint8_t *)&data, sizeof(data));
-  //   Serial2.write((const uint8_t *)&data, sizeof(data));
+  if (count % 1 == 0) {
+    Serial.write((const uint8_t *)&data, sizeof(data));
+    Serial2.write((const uint8_t *)&data, sizeof(data));
 
-  //   if (sen.sdexists) {
-  //     sen.f.close();
-  //     sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-  //   }
-  // }
+    if (sen.sdexists) {
+      sen.f.close();
+      sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+    }
+  }
 
-  // count += 1;
+  count += 1;
 }
