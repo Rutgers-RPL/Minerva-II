@@ -37,7 +37,6 @@ SFE_MMC5983MA mag;
 SFE_UBLOX_GNSS gps;
 
 
-
 class Sensors{
     public:
         
@@ -65,6 +64,7 @@ class Sensors{
 
             int status;
             status = accel.begin();
+            status = accel.setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
             while (status < 0) {
                 Serial.println("Accel Initialization Error");
                 Serial.println(status);
@@ -81,6 +81,7 @@ class Sensors{
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);
+            status = baro.setODRFrequency(BMP5_ODR_240_HZ);
             while (status != BMP5_OK) {
                 Serial.println("Baro Initialization Error");
                 Serial.println(status);
@@ -111,14 +112,19 @@ class Sensors{
             }
             
             Serial.println("Sensor initialization complete...");
+
+            gps.setI2COutput(COM_TYPE_UBX);
+            gps.setNavigationFrequency(10);
+            gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
+
         }
 
         Vec3 readAccel(){
             /* read the accel */
             accel.readSensor();
-            Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(), accel.getAccelZ_mss());
-            q = imuRot.rotate(q);
-            q = allRot.rotate(q);
+            Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(),-1.0 * accel.getAccelZ_mss());
+            //q = imuRot.rotate(q);
+            //q = allRot.rotate(q);
 
             return Vec3(q.b, q.c, q.d);
         }
@@ -138,8 +144,8 @@ class Sensors{
             uint32_t z = mag.getMeasurementZ();
             //sBmm150MagData_t magData = mag.getGeomagneticData();
             Quaternion q(x, y, z);
-            q = magRot.rotate(q);
-            q = allRot.rotate(q);
+            //q = magRot.rotate(q);
+            //q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
         }
 
