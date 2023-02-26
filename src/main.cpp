@@ -193,38 +193,44 @@ void loop() {
     altTime = micros();
     lastTime = altTime;
   }
-  
-  realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-                      gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, bkf.X(0,0),
-                      (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
-
-  //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
-
-  data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
-  if (sen.sdexists && sen.f) {
-    sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-    sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-    sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-    sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-    sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-    sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-    sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  } else {
-    data.code = -1;
-    data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
+  if (micros() - printTime >= 100000) {
+    Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
+    Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
+    Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
+    printTime = micros();
   }
+  
+  // realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
+  //                     gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, bkf.X(0,0),
+  //                     (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
 
-  if (count % 1 == 0) {
-    Serial.write((const uint8_t *)&data, sizeof(data));
-    Serial2.write((const uint8_t *)&data, sizeof(data));
+  // //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
 
-    if (sen.sdexists) {
-      sen.f.close();
-      sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-    }
-  }
+  // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  
+  // if (sen.sdexists && sen.f) {
+  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
+  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
+  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
+  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
+  //   sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
+  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
+  // } else {
+  //   data.code = -1;
+  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  
+  // }
+
+  // if (count % 1 == 0) {
+  //   Serial.write((const uint8_t *)&data, sizeof(data));
+  //   Serial2.write((const uint8_t *)&data, sizeof(data));
+
+  //   if (sen.sdexists) {
+  //     sen.f.close();
+  //     sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+  //   }
+  // }
 
   count += 1;
 }
