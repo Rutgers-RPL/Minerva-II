@@ -58,6 +58,24 @@ bool ledOn;
 
 Ahrs thisahrs;
 Sensors sen;
+bool firstGPS = true;
+float xOffset = 0.0;
+float yOffset = 0.0;
+float zOffset = 0.0;
+
+void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
+  if (firstGPS) {
+    xOffset = ubxDataStruct->ecefX/100.0;
+    yOffset = ubxDataStruct->ecefY/100.0;
+    zOffset = ubxDataStruct->ecefZ/100.0;
+    firstGPS = false;
+  } else {
+    Serial.println();
+    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
+    Serial.println("\t\tX\tY\tZ");
+    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -68,14 +86,18 @@ void setup() {
   Serial.println("test");
   Serial2.flush();
   Serial.println("Starting ...");
+  gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
 }
+
+
 
 Quaternion orientation = Quaternion();
 long lastTime = micros();
 double threshold = 0.05;
 
 void loop() {
-  
+  gps.checkUblox(); // Check for the arrival of new data and process it.
+  gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
   // Vec3 magnetometer_data = sen.readMag();
   // Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
   // Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
@@ -145,7 +167,7 @@ void loop() {
   }
 
   if (count % 15 == 0) {
-    Serial.write((const uint8_t *)&data, sizeof(data));
+    //Serial.write((const uint8_t *)&data, sizeof(data));
     Serial2.write((const uint8_t *)&data, sizeof(data));
 
     if (sen.sdexists) {
