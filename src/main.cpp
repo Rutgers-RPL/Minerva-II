@@ -141,7 +141,6 @@ void loop() {
   } else {
     data.code = -1;
     data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
   }
 
   if (count % 15 == 0) {
@@ -149,8 +148,7 @@ void loop() {
     Serial2.write((const uint8_t *)&data, sizeof(data));
 
     if (sen.sdexists) {
-      sen.f.close();
-      sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+      sen.f.flush();
     }
   }
 
