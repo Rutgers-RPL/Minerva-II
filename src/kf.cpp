@@ -1,49 +1,81 @@
 #include "kf.h"
 KalmanFilter::KalmanFilter() {
-    this->X = {0.0, 0.0, 0.0};
-    this->Xp = {0.0, 0.0, 0.0};
+    this->X = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     this->P = {10.0, 0.0, 0.0,
          0.0, 10.0, 0.0,
          0.0, 0.0, 10.0};
-    this->Pp = {10.0, 0.0, 0.0,
-         0.0, 10.0, 0.0,
-         0.0, 0.0, 10.0};
-    this->R = {1.0};
-    I = {1.0, 0.0, 0.0,
-         0.0, 1.0, 0.0,
-         0.0, 0.0, 1.0};
-    this->H = {1.0, 0.0, 0.0};
+    this->R = {4.0, 0.0, 0.0, 0.0,
+               0.0, 4.0, 0.0, 0.0,
+               0.0, 0.0, 4.0, 0.0,
+               0.0, 0.0, 0.0, 2.0};
+    I = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+
+    this->H = {1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0};
 }
 
-void KalmanFilter::predict(float dt, float acceleration) {
-    BLA::Matrix<3, 3> F = {1.0, dt, 0.0,
-                           0.0, 1.0, 0.0,
-                           0.0, 0.0, 0.0};
+void KalmanFilter::predict(float dt, float accelerometer_x, float accelerometer_y, float accelerometer_z) {
+    BLA::Matrix<9, 9> F = {1.0, dt, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 1.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 1.0, dt, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 1.0, 0.0,  0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0, 0.0, 0.0, 0.0, 0.0, 1.0, dt, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  0.0, 1.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,};
 
-    BLA::Matrix<3, 3> B = {0.0, 0.0, 0.5 * dt * dt,
-                           0.0, 0.0, dt,
-                           0.0, 0.0, 1.0};
+    BLA::Matrix<9, 9> B = {0.0, 0.0, 0.5 * dt * dt, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, dt, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.5 * dt * dt, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, dt, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5 * dt *dt,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, dt,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
 
-    BLA::Matrix<3> u = {0.0, 0.0, acceleration};
+    BLA::Matrix<9> u = {0.0, 0.0, accelerometer_x, 0.0, 0.0, accelerometer_y, 0.0, 0.0, accelerometer_z};
 
-    BLA::Matrix<3, 3> Q = {dt*dt*dt*dt/4.0, dt*dt*dt/2.0, dt*dt/2.0,
-                         dt*dt*dt/2.0, dt*dt, dt,
-                         dt*dt/2.0, dt, 1.0};
-    Q = Q * 0.02;
+    BLA::Matrix<9, 9> Q = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01};
+    //Q = Q * 0.02;
 
-    this->X = F * this->Xp + B * u;
-    this->P = F * this->Pp * ~F + Q;
-    this->Xp = this->X;
-    this->Pp = this->P;
+    this->X = F * this->X + B * u;
+    this->P = F * this->P * ~F + Q;
 }
-void KalmanFilter::update(float dt, float position) {
-    BLA::Matrix<1> pos = {position};
-    BLA::Matrix<1> y = pos - this->H * this->Xp;
-    BLA::Matrix<1> S = this->H * (this->Pp * ~this->H) + this->R;
-    BLA::Matrix<3> K = this->Pp * (~this->H * BLA::Inverse(S));
+void KalmanFilter::updateGPS(float dt, float gps_x, float gps_y, float gps_z) {
+    BLA::Matrix<4> z = {gps_x, gps_y, gps_z, 0.0};
+    BLA::Matrix<4> y = z - this->H * this->X;
+    BLA::Matrix<4, 4> S = this->H * (this->P * ~this->H) + this->R;
+    BLA::Matrix<9, 4> K = this->P * (~this->H * BLA::Inverse(S));
 
-    this->X = this->Xp + K * y;
-    this->P = (this->I - K * this->H) * (this->Pp * ~(this->I - K * this->H) + K * (this->R * ~K));
-    this->Xp = this->X;
-    this->Pp = this->P;
+    this->X = this->X + K * y;
+    this->P = (this->I - K * this->H) * (this->P * ~(this->I - K * this->H) + K * (this->R * ~K));
+}
+void KalmanFilter::updateBaro(float dt, float barometer_z) {
+    BLA::Matrix<4> z = {0.0, 0.0, 0.0, barometer_z};
+    BLA::Matrix<4> y = z - this->H * this->X;
+    BLA::Matrix<4, 4> S = this->H * (this->P * ~this->H) + this->R;
+    BLA::Matrix<9, 4> K = this->P * (~this->H * BLA::Inverse(S));
+
+    this->X = this->X + K * y;
+    this->P = (this->I - K * this->H) * (this->P * ~(this->I - K * this->H) + K * (this->R * ~K));
 }

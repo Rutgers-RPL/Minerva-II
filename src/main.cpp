@@ -72,6 +72,28 @@ Sensors sen;
 KalmanFilter kf;
 BetterKalmanFilter bkf;
 
+
+bool firstGPS = true;
+float xOffset = 0.0;
+float yOffset = 0.0;
+float zOffset = 0.0;
+
+void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
+  if (firstGPS) {
+    xOffset = ubxDataStruct->ecefX/100.0;
+    yOffset = ubxDataStruct->ecefY/100.0;
+    zOffset = ubxDataStruct->ecefZ/100.0;
+    firstGPS = false;
+  } else {
+    Serial.println();
+    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
+    Serial.println("\t\tX\tY\tZ");
+    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
+
+    //kf.updateGPS(micros() - lastTime, ubxDataStruct)
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200);
@@ -87,6 +109,8 @@ void setup() {
   altTime = micros();
   printTime = micros();
   lastTime = micros();
+
+  gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
 }
 
 Quaternion orientation = Quaternion();
@@ -94,6 +118,8 @@ Quaternion orientation = Quaternion();
 double threshold = 0.05;
 
 void loop() {
+  gps.checkUblox(); // Check for the arrival of new data and process it.
+  gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
   // if (micros() - accTime >= 625) {
   //   bkf.H = {0.0, 0.0, 1.0};
   //   float acc = thisahrs.aglobal.d;
@@ -170,41 +196,42 @@ void loop() {
 
   Quaternion groundToSensorFrame = orientation;
 
-  if (micros() - accTime >= 625) {
-    bkf.H = {0.0, 0.0, 1.0};
-    float acc = thisahrs.aglobal.d;
 
-    kf.predict((micros() - lastTime) / 1000000.0, acc);
+  // if (micros() - accTime >= 625) {
+  //   //bkf.H = {0.0, 0.0, 1.0};
+  //   float acc = thisahrs.aglobal.d;
 
-    bkf.predict((micros() - lastTime) / 1000000.0);
-    bkf.update((micros() - lastTime) / 1000000.0, acc);
-    accTime = micros();
-    lastTime = accTime;
-  }
+  //   kf.predict((micros() - lastTime) / 1000000.0, acc);
 
-  if (micros() - altTime >= 4167) {
-    bkf.H = {1.0, 0.0, 0.0};
-    float alt = sen.readAltitude() - initialAltitude;
+  //   //bkf.predict((micros() - lastTime) / 1000000.0);
+  //   //bkf.update((micros() - lastTime) / 1000000.0, acc);
+  //   accTime = micros();
+  //   lastTime = accTime;
+  // }
 
-    kf.update((micros() - lastTime) / 1000000.0, alt);
+  // if (micros() - altTime >= 4167) {
+  //   //bkf.H = {1.0, 0.0, 0.0};
+  //   float alt = sen.readAltitude() - initialAltitude;
 
-    bkf.predict((micros() - lastTime) / 1000000.0);
-    bkf.update((micros() - lastTime) / 1000000.0, alt);
-    altTime = micros();
-    lastTime = altTime;
-  }
-  if (micros() - printTime >= 100000) {
-    Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
-    Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
-    Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
-    printTime = micros();
-  }
+  //   kf.update((micros() - lastTime) / 1000000.0, alt);
+
+  //   //bkf.predict((micros() - lastTime) / 1000000.0);
+  //   //bkf.update((micros() - lastTime) / 1000000.0, alt);
+  //   altTime = micros();
+  //   lastTime = altTime;
+  // }
+  // if (micros() - printTime >= 100000) {
+  //   Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
+  //   Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
+  //   Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
+  //   printTime = micros();
+  // }
   
   // realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
   //                     gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, bkf.X(0,0),
   //                     (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
 
-  // //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
+  Serial.printf("\n(X:%f\t, Y:%f\t, Z:%f)\n", thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d);
 
   // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
