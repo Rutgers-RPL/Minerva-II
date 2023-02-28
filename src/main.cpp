@@ -143,7 +143,7 @@ void loop() {
     data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   }
 
-  if (count % 15 == 0) {
+  if (count % 1 == 0) {
     Serial.write((const uint8_t *)&data, sizeof(data));
     Serial2.write((const uint8_t *)&data, sizeof(data));
 
