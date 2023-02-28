@@ -62,6 +62,8 @@ bool firstGPS = true;
 float xOffset = 0.0;
 float yOffset = 0.0;
 float zOffset = 0.0;
+float lat = 0.0;
+float lon = 0.0;
 
 void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
   if (firstGPS) {
@@ -76,6 +78,19 @@ void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
     Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
   }
 }
+  void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
+    Serial.println("I made it to the callback");
+    if(firstGPS) {
+      lat = ubxDataStruct->lat;
+      lon = ubxDataStruct->lon;
+      firstGPS=false;
+    } else {
+      Serial.println();
+      Serial.print("Latitude: "); Serial.println(lat);
+      Serial.print("Longitude: "); Serial.println(lon);
+    }
+  }
+
 
 void setup() {
   Serial.begin(115200);
@@ -86,7 +101,9 @@ void setup() {
   Serial.println("test");
   Serial2.flush();
   Serial.println("Starting ...");
-  gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
+  Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
+  //Serial.print("Got data");
+  //gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
 }
 
 
