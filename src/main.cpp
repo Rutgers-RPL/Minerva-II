@@ -51,6 +51,9 @@ double am[3];
 double wm[3];
 int count = 0;
 int start;
+double accCutoff = 0.05;
+double velocity[3];
+double position[3];
 
 const int led = 13;
 long blinkCounter;
@@ -143,8 +146,36 @@ void loop() {
     data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   }
 
+  
+  if (thisahrs.aglobal.b > accCutoff) {
+    velocity[0] += thisahrs.aglobal.b * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.c > accCutoff) {
+    velocity[1] += thisahrs.aglobal.c * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.d > accCutoff) {
+    velocity[2] += thisahrs.aglobal.d * (micros()-lastTime) / 1000000.0;
+  }
+  position[0] += velocity[0] * (micros()-lastTime) / 1000000.0;
+  position[1] += velocity[1] * (micros()-lastTime) / 1000000.0;
+  position[2] += velocity[2] * (micros()-lastTime) / 1000000.0;
+  lastTime = micros();
+  Serial.println("\t      X\t\tY\tZ");
+  Serial.print("Acceleration: "); Serial.print(thisahrs.aglobal.b); Serial.print("\t"); Serial.print(thisahrs.aglobal.c); Serial.print("\t"); Serial.println(thisahrs.aglobal.d);
+  Serial.print("Velocity:     "); Serial.print(velocity[0]); Serial.print("\t"); Serial.print(velocity[1]); Serial.print("\t"); Serial.println(velocity[2]);
+  Serial.print("Position:     "); Serial.print(position[0]); Serial.print("\t"); Serial.print(position[1]); Serial.print("\t"); Serial.println(position[2]);
+
+  if (Serial.available()) {
+    Serial.clear();
+    position[0] = 0.0;
+    position[1] = 0.0;
+    position[2] = 0.0;
+    velocity[0] = 0.0;
+    velocity[1] = 0.0;
+    velocity[2] = 0.0;
+  }
   if (count % 1 == 0) {
-    Serial.write((const uint8_t *)&data, sizeof(data));
+    //Serial.write((const uint8_t *)&data, sizeof(data));
     Serial2.write((const uint8_t *)&data, sizeof(data));
 
     if (sen.sdexists) {
