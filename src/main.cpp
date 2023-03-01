@@ -63,7 +63,7 @@ Sensors sen;
 const uint8_t baro_int_pin = 31;
 volatile bool baro_interrupt = false;
 const uint8_t mag_int_pin = 40;
-volatile bool mag_interrupt = false;
+volatile bool mag_interrupt = true;
 
 void baroInterruptHandler() {
     baro_interrupt = true;
@@ -82,6 +82,8 @@ void setup() {
   Serial.println("test");
   Serial2.flush();
   Serial.println("Starting ...");
+  pinMode(baro_int_pin, INPUT);
+  pinMode(mag_int_pin, INPUT);
   attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
 }
@@ -108,11 +110,11 @@ void loop() {
   // /* read the gyr */
   Vec3 gyr = sen.readGyro();
   // /* read the mag */
-  Vec3 mag = sen.readMag();
+  Vec3 magr = sen.readMag();
 
 
 
-  thisahrs.update(acc,gyr,mag);
+  thisahrs.update(acc,gyr,magr);
   orientation = thisahrs.q;
 
   Quaternion groundToSensorFrame = orientation;
@@ -121,7 +123,7 @@ void loop() {
 
 
   realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-                      gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, 0,
+                      gyr.x, gyr.y, gyr.z, magr.x, magr.y, magr.z, 0,
                       0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
 
 
@@ -159,8 +161,11 @@ void loop() {
   if (mag_interrupt) {
     count++;
     mag_interrupt = false;
-    sen.mag.clearMeasDoneInterrupt();
-
+    mag.clearMeasDoneInterrupt();
+    uint32_t rawValueX = 0;
+    uint32_t rawValueY = 0;
+    uint32_t rawValueZ = 0;
+    mag.readFieldsXYZ(&rawValueX, &rawValueY, &rawValueZ);
   }
     //count++;
   if (micros() - lastTime >= 1000000) {

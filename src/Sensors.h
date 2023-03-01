@@ -116,12 +116,13 @@ class Sensors{
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
+            mag.performResetOperation();
             mag.setFilterBandwidth(800);
-            mag.setContinuousModeFrequency(1000);
+            mag.setContinuousModeFrequency(100);
             mag.enableContinuousMode();
             mag.enableAutomaticSetReset();
             mag.enableInterrupt();
-            mag.performResetOperation();
+            
 
             status = gps.begin(Wire2, gps_i2c_address);
             while (!status) {
