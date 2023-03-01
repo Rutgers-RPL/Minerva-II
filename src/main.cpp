@@ -22,7 +22,7 @@
 typedef struct {
   short magic; // 2 bytes - 2
   float time; // 4 bytes - 6
-  int code; // 4 bytes - 10
+  byte code; // 1 bytes - 11
   float voltage; // 4 bytes - 14
   float accx; // 4 bytes - 18
   float accy; // 4 bytes - 22
@@ -33,7 +33,8 @@ typedef struct {
   float magx; // 4 bytes - 42
   float magy; // 4 bytes - 46
   float magz; // 4 bytes - 50
-  float altitude; // 4 bytes - 54
+  float baro_alt; // 4 bytes - 54
+  float gps_alt;
   float temp; // 4 bytes - 58
   float w; // 4 bytes - 62
   float x; // 4 bytes - 66
@@ -50,7 +51,14 @@ unsigned long previousTime = 0;
 double am[3];
 double wm[3];
 int count = 0;
+uint32_t bCount = 0;
+uint32_t aCount = 0;
+uint32_t gCount = 0;
+uint32_t mCount = 0;
 int start;
+double accCutoff = 0.05;
+double velocity[3];
+double position[3];
 
 const int led = 13;
 long blinkCounter;
@@ -92,6 +100,31 @@ void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
   }
 
 
+const uint8_t acc_int_pin = 9;
+volatile bool acc_interrupt = false;
+const uint8_t gyro_int_pin = 10;
+volatile bool gyro_interrupt = false;
+const uint8_t baro_int_pin = 31;
+volatile bool baro_interrupt = false;
+const uint8_t mag_int_pin = 40;
+volatile bool mag_interrupt = true;
+
+void baroInterruptHandler() {
+    baro_interrupt = true;
+}
+
+void magInterruptHandler() {
+    mag_interrupt = true;
+}
+
+void accInterruptHandler() {
+    acc_interrupt = true;
+}
+
+void gyroInterruptHandler() {
+    gyro_interrupt = true;
+}
+
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200);
@@ -104,6 +137,14 @@ void setup() {
   Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
   //Serial.print("Got data");
   //gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
+  pinMode(baro_int_pin, INPUT);
+  pinMode(mag_int_pin, INPUT);
+  pinMode(acc_int_pin, INPUT);
+  pinMode(gyro_int_pin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(acc_int_pin), accInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 }
 
 
@@ -115,26 +156,7 @@ double threshold = 0.05;
 void loop() {
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
-  // Vec3 magnetometer_data = sen.readMag();
-  // Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
-  // Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
-  // Vec3 accelerometer_data = sen.readAccel();
-  // Serial.println("Accelerometer Data: ");Serial.print(accelerometer_data.x);Serial.print(" ");
-  // Serial.print(accelerometer_data.y); Serial.print(" "); Serial.println(accelerometer_data.z);
-  // Vec3 gyroscope_data = sen.readGyro();
-  // Serial.println("Gyroscope Data: ");Serial.print(gyroscope_data.x);Serial.print(" ");
-  // Serial.print(gyroscope_data.x); Serial.print(" "); Serial.println(gyroscope_data.x);
-  // double pressure_data = sen.readPressure();
-  // Serial.println("Pressure Data: "); Serial.println(pressure_data);
-  // double altitude = sen.readAltitude();
-  // Serial.println("Altitude: "); Serial.println(altitude);
-  // double temperatureC = sen.readTemperature();
-  // Serial.println("Temperature: "); Serial.println(temperatureC);
-  // float longitude = sen.readLongitude();
-  // float latitude = sen.readLatitude();
-  // Serial.println("Altitude (Latitude, Longitude):");
-  // Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
-  // delay(10);
+
 
   if (millis() - blinkCounter >= 500) {
     if (ledOn) {
@@ -147,23 +169,29 @@ void loop() {
     blinkCounter = millis();
   }
 
-  /* read the accel */
+  // /* read the accel */
   Vec3 acc = sen.readAccel();
-  /* read the mag */
-  Vec3 mag = sen.readMag();
-
-  /* read the gyr */
+  // /* read the gyr */
   Vec3 gyr = sen.readGyro();
+  // /* read the mag */
+  Vec3 magr = sen.readMag();
 
-  thisahrs.update(acc,gyr,mag);
+
+
+  thisahrs.update(acc,gyr,magr);
   orientation = thisahrs.q;
 
   Quaternion groundToSensorFrame = orientation;
 
-  
+
+
+
   realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-                      gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, sen.readAltitude(),
-                      (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
+                      gyr.x, gyr.y, gyr.z, magr.x, magr.y, magr.z, 0,
+                      0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
+
+
+
 
   //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
 
@@ -175,23 +203,71 @@ void loop() {
     sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
     sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
     sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-    sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
+    sen.f.print(data.baro_alt); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
     sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
   } else {
+    //Serial.println("No sd writing");
     data.code = -1;
     data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
   }
+
+  if (sen.sdexists) {
+      //sen.f.close();
+      //sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+      //sen.f.flush();
+      //sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+    }
+
+  if (baro_interrupt) {
+    bCount++;
+    baro_interrupt = false;
+  }
+  if (acc_interrupt) {
+    aCount++;
+    acc_interrupt = false;
+  }
+  if (gyro_interrupt) {
+    gCount++;
+    gyro_interrupt = false;
+  }
+  if (mag_interrupt) {
+    mCount++;
+    mag_interrupt = false;
+    mag.clearMeasDoneInterrupt();
+  }
+    //count++;
+  if (micros() - lastTime >= 1000000) {
+    Serial.println("\tAcc:\tGyro:\tBaro:\tMag:");
+    Serial.print("HZ:\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.println(mCount);
+    lastTime = micros();
+    aCount = 0;
+    gCount = 0;
+    bCount = 0;
+    mCount = 0;
+  }
+
+  
+  if (thisahrs.aglobal.b > accCutoff) {
+    velocity[0] += thisahrs.aglobal.b * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.c > accCutoff) {
+    velocity[1] += thisahrs.aglobal.c * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.d > accCutoff) {
+    velocity[2] += thisahrs.aglobal.d * (micros()-lastTime) / 1000000.0;
+  }
+
+  /*
 
   if (count % 15 == 0) {
     //Serial.write((const uint8_t *)&data, sizeof(data));
     Serial2.write((const uint8_t *)&data, sizeof(data));
 
     if (sen.sdexists) {
-      sen.f.close();
-      sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
+      sen.f.flush();
     }
   }
 
   count += 1;
+  */
 }
