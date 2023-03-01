@@ -138,7 +138,10 @@ class Sensors{
                 delay(1000);
                 status = gps.begin(Wire2, gps_i2c_address);
             }
-            
+            gps.setI2COutput(COM_TYPE_UBX);
+            gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
+            gps.setNavigationFrequency(10);
+            gps.saveConfiguration();
             Serial.println("Sensor initialization complete...");
         }
 
