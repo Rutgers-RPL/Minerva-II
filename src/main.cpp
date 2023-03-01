@@ -128,71 +128,65 @@ void loop() {
     blinkCounter = millis();
   }
 
-  // /* read the accel */
-  Vec3 acc = sen.readAccel();
-  // /* read the gyr */
-  Vec3 gyr = sen.readGyro();
-  // /* read the mag */
-  Vec3 magr = sen.readMag();
+  // if (baro_interrupt) {
+  //   bCount++;
+  //   baro_interrupt = false;
+  // }
+  // if (acc_interrupt) {
+  //   aCount++;
+  //   acc_interrupt = false;
+  // }
+  // if (gyro_interrupt) {
+  //   gCount++;
+  //   gyro_interrupt = false;
+  // }
+  // if (mag_interrupt) {
+  //   mCount++;
+  //   mag_interrupt = false;
+  //   mag.clearMeasDoneInterrupt();
+  // }
 
-
-
-  thisahrs.update(acc,gyr,magr);
-  orientation = thisahrs.q;
-
-  Quaternion groundToSensorFrame = orientation;
-
-
-
-
-  realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-                      gyr.x, gyr.y, gyr.z, magr.x, magr.y, magr.z, 0,
-                      0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
-
-
-
-
-  //Serial.printf("(%f, %f, %f)\n", data.accx, data.accy, data.accz);
-
-  data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
-  if (sen.sdexists && sen.f) {
-    sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-    sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-    sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-    sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-    sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-    sen.f.print(data.baro_alt); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-    sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  } else {
-    //Serial.println("No sd writing");
-    data.code = -1;
-    data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  if (acc_interrupt && gyro_interrupt && mag_interrupt) {
+    aCount++;
+    gCount++;
+    mCount++;
+    acc_interrupt = false;
+    gyro_interrupt = false;
+    mag_interrupt = false;
+    Vec3 magr = sen.readMag();
+    mag.clearMeasDoneInterrupt();
+    Vec3 acc = sen.readAccel();
+    Vec3 gyr = sen.readGyro();
+    thisahrs.update(acc,gyr,magr);
+    orientation = thisahrs.q;
   }
-
-  if (sen.sdexists) {
-      //sen.f.close();
-      //sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-      //sen.f.flush();
-      //sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-    }
 
   if (baro_interrupt) {
     bCount++;
     baro_interrupt = false;
   }
-  if (acc_interrupt) {
-    aCount++;
-    acc_interrupt = false;
-  }
-  if (gyro_interrupt) {
-    gCount++;
-    gyro_interrupt = false;
-  }
-  if (mag_interrupt) {
-    mCount++;
-    mag_interrupt = false;
-    mag.clearMeasDoneInterrupt();
+
+  Quaternion groundToSensorFrame = orientation;
+
+
+  //data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  
+  // if (sen.sdexists && sen.f) {
+  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
+  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
+  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
+  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
+  //   sen.f.print(data.baro_alt); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
+  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
+  // } else {
+  //   //Serial.println("No sd writing");
+  //   data.code = -1;
+  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  // }
+
+  if (sen.sdexists) {
+      //sen.f.flush();
   }
     //count++;
   if (micros() - lastTime >= 1000000) {
