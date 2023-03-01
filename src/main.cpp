@@ -155,7 +155,7 @@ void loop() {
     }
 
   if (baro_interrupt) {
-    count++;
+    //count++;
     baro_interrupt = false;
   }
   if (mag_interrupt) {

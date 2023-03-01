@@ -116,11 +116,11 @@ class Sensors{
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
+            mag.softReset();
             mag.performResetOperation();
-            mag.setFilterBandwidth(800);
-            mag.setContinuousModeFrequency(100);
+            mag.setFilterBandwidth(400);
+            mag.setContinuousModeFrequency(1000);
             mag.enableContinuousMode();
-            mag.enableAutomaticSetReset();
             mag.enableInterrupt();
             
 
