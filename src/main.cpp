@@ -66,6 +66,39 @@ bool ledOn;
 
 Ahrs thisahrs;
 Sensors sen;
+bool firstGPS = true;
+float xOffset = 0.0;
+float yOffset = 0.0;
+float zOffset = 0.0;
+float lat = 0.0;
+float lon = 0.0;
+
+void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
+  if (firstGPS) {
+    xOffset = ubxDataStruct->ecefX/100.0;
+    yOffset = ubxDataStruct->ecefY/100.0;
+    zOffset = ubxDataStruct->ecefZ/100.0;
+    firstGPS = false;
+  } else {
+    Serial.println();
+    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
+    Serial.println("\t\tX\tY\tZ");
+    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
+  }
+}
+  void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
+    Serial.println("I made it to the callback");
+    if(firstGPS) {
+      lat = ubxDataStruct->lat;
+      lon = ubxDataStruct->lon;
+      firstGPS=false;
+    } else {
+      Serial.println();
+      Serial.print("Latitude: "); Serial.println(lat);
+      Serial.print("Longitude: "); Serial.println(lon);
+    }
+  }
+
 
 const uint8_t acc_int_pin = 9;
 volatile bool acc_interrupt = false;
@@ -101,6 +134,9 @@ void setup() {
   Serial.println("test");
   Serial2.flush();
   Serial.println("Starting ...");
+  Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
+  //Serial.print("Got data");
+  //gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
   pinMode(baro_int_pin, INPUT);
   pinMode(mag_int_pin, INPUT);
   pinMode(acc_int_pin, INPUT);
@@ -111,11 +147,16 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 }
 
+
+
 Quaternion orientation = Quaternion();
 long lastTime = micros();
 double threshold = 0.05;
 
 void loop() {
+  gps.checkUblox(); // Check for the arrival of new data and process it.
+  gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
+
 
   if (millis() - blinkCounter >= 500) {
     if (ledOn) {
