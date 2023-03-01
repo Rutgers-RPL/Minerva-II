@@ -25,7 +25,7 @@
 typedef struct {
   short magic; // 2 bytes - 2
   float time; // 4 bytes - 6
-  int code; // 4 bytes - 10
+  byte code; // 1 bytes - 11
   float voltage; // 4 bytes - 14
   float accx; // 4 bytes - 18
   float accy; // 4 bytes - 22
@@ -36,17 +36,21 @@ typedef struct {
   float magx; // 4 bytes - 42
   float magy; // 4 bytes - 46
   float magz; // 4 bytes - 50
-  float altitude; // 4 bytes - 54
+  float baro_alt; // 4 bytes - 54
   float temp; // 4 bytes - 58
   float w; // 4 bytes - 62
   float x; // 4 bytes - 66
   float y; // 4 bytes - 70
   float z; // 4 bytes - 74
-  // float lat; // 4 bytes - 78
-  // float lon; // 4 bytes - 82
-  // byte sat; // 4 bytes - 83
-  unsigned int checksum; // 4 bytes - 87
+  byte numSatellites;
+  byte gpsFixType;
+  float latitude;
+  float longitude;
+  float hMSL;
+  unsigned int checksum; // 4 bytes - 78
 } __attribute__((packed)) realPacket;
+
+realPacket packet;
 
 FastCRC32 CRC32;
 
@@ -56,7 +60,16 @@ unsigned long previousTime = 0;
 double am[3];
 double wm[3];
 int count = 0;
+uint32_t bCount = 0;
+uint32_t aCount = 0;
+uint32_t gCount = 0;
+uint32_t mCount = 0;
+uint32_t tCount = 0;
+uint32_t gpsCount = 0;
 int start;
+double accCutoff = 0.05;
+double velocity[3];
+double position[3];
 
 const int led = 13;
 long blinkCounter;
@@ -71,8 +84,6 @@ Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
 BetterKalmanFilter bkf;
-
-
 bool firstGPS = true;
 float xOffset = 0.0;
 float yOffset = 0.0;
@@ -93,6 +104,55 @@ void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
     //kf.updateGPS(micros() - lastTime, ubxDataStruct)
   }
 }
+  
+float lat = 0.0;
+float lon = 0.0;
+uint32_t gpsTime = 0;
+
+void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
+  gpsCount++;
+  if (ubxDataStruct->iTOW == gpsTime) {
+    Serial.println("Too fast for GPS.");
+  } else {
+    //Serial.println("GPS Good.");
+  }
+  gpsTime = ubxDataStruct->iTOW;
+  packet.hMSL = ubxDataStruct->hMSL / 1000.0;
+  packet.numSatellites = ubxDataStruct->numSV;
+  packet.latitude = ubxDataStruct->lat * 1e-7;
+  packet.longitude = ubxDataStruct->lon * 1e-7;
+  packet.gpsFixType = ubxDataStruct->fixType;
+}
+void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
+  Serial.print("Latitude: "); Serial.println(ubxDataStruct->lat);
+  Serial.print("Longitude: "); Serial.println(ubxDataStruct->lon);
+}
+
+
+const uint8_t acc_int_pin = 9;
+volatile bool acc_interrupt = false;
+const uint8_t gyro_int_pin = 10;
+volatile bool gyro_interrupt = false;
+const uint8_t baro_int_pin = 31;
+volatile bool baro_interrupt = false;
+const uint8_t mag_int_pin = 40;
+volatile bool mag_interrupt = true;
+
+void baroInterruptHandler() {
+    baro_interrupt = true;
+}
+
+void magInterruptHandler() {
+    mag_interrupt = true;
+}
+
+void accInterruptHandler() {
+    acc_interrupt = true;
+}
+
+void gyroInterruptHandler() {
+    gyro_interrupt = true;
+}
 
 void setup() {
   Serial.begin(115200);
@@ -105,13 +165,24 @@ void setup() {
   delay(500);
   initialAltitude = sen.readAltitude();
   Serial.println("Starting ...");
-  accTime = micros();
-  altTime = micros();
-  printTime = micros();
-  lastTime = micros();
-
-  gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
+  //Serial.println(gps.setAutoPVTcallbackPtr(&printPVTData));
+  while (!gps.setAutoPVTcallbackPtr(&printPVTData)) {
+    delay(1000);
+    Serial.println("Retrying...");
+  }
+  //Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
+  //Serial.print("Got data");
+  pinMode(baro_int_pin, INPUT);
+  pinMode(mag_int_pin, INPUT);
+  pinMode(acc_int_pin, INPUT);
+  pinMode(gyro_int_pin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(acc_int_pin), accInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 }
+
+
 
 Quaternion orientation = Quaternion();
 //long lastTime = micros();
@@ -120,57 +191,6 @@ double threshold = 0.05;
 void loop() {
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
-  // if (micros() - accTime >= 625) {
-  //   bkf.H = {0.0, 0.0, 1.0};
-  //   float acc = thisahrs.aglobal.d;
-
-  //   kf.predict((micros() - lastTime) / 1000000.0, acc);
-
-  //   bkf.predict((micros() - lastTime) / 1000000.0);
-  //   bkf.update((micros() - lastTime) / 1000000.0, acc);
-  //   accTime = micros();
-  //   lastTime = accTime;
-  // }
-
-  // if (micros() - altTime >= 4167) {
-  //   bkf.H = {1.0, 0.0, 0.0};
-  //   float alt = sen.readAltitude() - initialAltitude;
-
-  //   kf.update((micros() - lastTime) / 1000000.0, alt);
-
-  //   bkf.predict((micros() - lastTime) / 1000000.0);
-  //   bkf.update((micros() - lastTime) / 1000000.0, alt);
-  //   altTime = micros();
-  //   lastTime = altTime;
-  // }
-
-  // if (micros() - printTime >= 100000) {
-  //   Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
-  //   Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
-  //   Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
-  //   printTime = micros();
-  // }
-  
-  // Vec3 magnetometer_data = sen.readMag();
-  // Serial.println("Magneteometer Data: ");Serial.print(magnetometer_data.x);Serial.print(" ");
-  // Serial.print(magnetometer_data.y); Serial.print(" "); Serial.println(magnetometer_data.z);
-  // Vec3 accelerometer_data = sen.readAccel();
-  // Serial.println("Accelerometer Data: ");Serial.print(accelerometer_data.x);Serial.print(" ");
-  // Serial.print(accelerometer_data.y); Serial.print(" "); Serial.println(accelerometer_data.z);
-  // Vec3 gyroscope_data = sen.readGyro();
-  // Serial.println("Gyroscope Data: ");Serial.print(gyroscope_data.x);Serial.print(" ");
-  // Serial.print(gyroscope_data.x); Serial.print(" "); Serial.println(gyroscope_data.x);
-  // double pressure_data = sen.readPressure();
-  // Serial.println("Pressure Data: "); Serial.println(pressure_data);
-  // double altitude = sen.readAltitude();
-  // Serial.println("Altitude: "); Serial.println(altitude);
-  // double temperatureC = sen.readTemperature();
-  // Serial.println("Temperature: "); Serial.println(temperatureC);
-  // float longitude = sen.readLongitude();
-  // float latitude = sen.readLatitude();
-  // Serial.println("Altitude (Latitude, Longitude):");
-  // Serial.print("("); Serial.print(latitude); Serial.print(", "); Serial.print(longitude); Serial.println(")");
-  // delay(10);
 
   if (millis() - blinkCounter >= 500) {
     if (ledOn) {
@@ -183,81 +203,101 @@ void loop() {
     blinkCounter = millis();
   }
 
-  /* read the accel */
-  Vec3 acc = sen.readAccel();
-  /* read the mag */
-  Vec3 mag = sen.readMag();
+  if (acc_interrupt && gyro_interrupt && mag_interrupt) {
+    aCount++;
+    gCount++;
+    mCount++;
+    acc_interrupt = false;
+    gyro_interrupt = false;
+    mag_interrupt = false;
+    mag.clearMeasDoneInterrupt();
+    Vec3 magVec = sen.readMag();
+    Vec3 accVec = sen.readAccel();
+    Vec3 gyrVec = sen.readGyro();
+    thisahrs.update(accVec,gyrVec,magVec);
+    orientation = thisahrs.q;
+    packet.accx = accVec.x;
+    packet.accy = accVec.y;
+    packet.accz = accVec.z;
+    packet.avelx = gyrVec.x;
+    packet.avely = gyrVec.y;
+    packet.avelz = gyrVec.z;
+    packet.magx = magVec.x;
+    packet.magy = magVec.y;
+    packet.magz = magVec.z;
+    packet.w = orientation.a;
+    packet.x = orientation.b;
+    packet.y = orientation.c;
+    packet.z = orientation.d;
+  }
 
-  /* read the gyr */
-  Vec3 gyr = sen.readGyro();
-
-  thisahrs.update(acc,gyr,mag);
-  orientation = thisahrs.q;
+  if (baro_interrupt) {
+    packet.baro_alt = sen.readAltitude();
+    bCount++;
+    baro_interrupt = false;
+  }
 
   Quaternion groundToSensorFrame = orientation;
 
-
-  // if (micros() - accTime >= 625) {
-  //   //bkf.H = {0.0, 0.0, 1.0};
-  //   float acc = thisahrs.aglobal.d;
-
-  //   kf.predict((micros() - lastTime) / 1000000.0, acc);
-
-  //   //bkf.predict((micros() - lastTime) / 1000000.0);
-  //   //bkf.update((micros() - lastTime) / 1000000.0, acc);
-  //   accTime = micros();
-  //   lastTime = accTime;
-  // }
-
-  // if (micros() - altTime >= 4167) {
-  //   //bkf.H = {1.0, 0.0, 0.0};
-  //   float alt = sen.readAltitude() - initialAltitude;
-
-  //   kf.update((micros() - lastTime) / 1000000.0, alt);
-
-  //   //bkf.predict((micros() - lastTime) / 1000000.0);
-  //   //bkf.update((micros() - lastTime) / 1000000.0, alt);
-  //   altTime = micros();
-  //   lastTime = altTime;
-  // }
-  // if (micros() - printTime >= 100000) {
-  //   Serial.println("\tPos(m) \t Vel(m/s) \t Acc(m/s/s)");
-  //   Serial.print("KF\t"); Serial.print(kf.X(0,0)); Serial.print("\t "); Serial.print(kf.X(0,1)); Serial.print("\t\t"); Serial.println(kf.X(0,2));
-  //   Serial.print("BKF\t"); Serial.print(bkf.X(0,0)); Serial.print("\t "); Serial.print(bkf.X(0,1)); Serial.print("\t\t"); Serial.println(bkf.X(0,2));
-  //   printTime = micros();
-  // }
+  //data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  // realPacket data = {0xBEEF, (micros()-offset) / 1000000.0, 0, sen.readVoltage(), thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d,
-  //                     gyr.x, gyr.y, gyr.z, mag.x, mag.y, mag.z, bkf.X(0,0),
-  //                     (sen.readTemperature()) / 1.0, groundToSensorFrame.a, groundToSensorFrame.b, groundToSensorFrame.c, groundToSensorFrame.d};
+  if (sen.sdexists && sen.f) {
+    sen.f.print(packet.time); sen.f.print(","); sen.f.print(packet.code); sen.f.print(","); sen.f.print(packet.voltage); sen.f.print(",");
+    // sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+    sen.f.print(packet.accx); sen.f.print(","); sen.f.print(packet.accy); sen.f.print(","); sen.f.print(packet.accz); sen.f.print(",");
+    sen.f.print(packet.avelx); sen.f.print(","); sen.f.print(packet.avely); sen.f.print(","); sen.f.print(packet.avelz); sen.f.print(",");
+    sen.f.print(packet.magx); sen.f.print(","); sen.f.print(packet.magy); sen.f.print(","); sen.f.print(packet.magz); sen.f.print(",");
+    sen.f.print(packet.baro_alt); sen.f.print(","); sen.f.print(packet.temp); sen.f.print(",");
+    sen.f.print(packet.w); sen.f.print(","); sen.f.print(packet.x); sen.f.print(","); sen.f.print(packet.y); sen.f.print(","); sen.f.print(packet.z); sen.f.println(",");
+  } else {
+    //Serial.println("No sd writing");
+    // data.code = -1;
+    // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  }
 
-  Serial.printf("\n(X:%f\t, Y:%f\t, Z:%f)\n", thisahrs.aglobal.b, thisahrs.aglobal.c, thisahrs.aglobal.d);
+  if (sen.sdexists && micros() - lastTime >= 1000000) {
+    sen.f.flush();
+  }
+    //count++;
+  if (micros() - lastTime >= 1000000) {
+    Serial.println();
+    Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
+    Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
+    Serial.print("Int:\t\t"); Serial.print(acc_interrupt); Serial.print("\t"); Serial.print(gyro_interrupt); Serial.print("\t"); Serial.print(baro_interrupt); Serial.print("\t"); Serial.println(mag_interrupt);
+    Serial.println("\thMSL:\tLat:\tLon:\tFix:\tSat:\tBaro:");
+    Serial.print("Packet:\t"); Serial.print(packet.hMSL); Serial.print("\t"); Serial.print(packet.latitude); Serial.print("\t"); Serial.print(packet.longitude); Serial.print("\t"); Serial.print(packet.gpsFixType); Serial.print("\t"); Serial.print(packet.numSatellites); Serial.print("\t"); Serial.println(packet.baro_alt);
+    lastTime = micros();
+    tCount = 0;
+    aCount = 0;
+    gCount = 0;
+    bCount = 0;
+    mCount = 0;
+    gpsCount = 0;
+  }
 
-  // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  // if (sen.sdexists && sen.f) {
-  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-  //   sen.f.print(data.altitude); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  // } else {
-  //   data.code = -1;
-  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  
-  // }
+  if (thisahrs.aglobal.b > accCutoff) {
+    velocity[0] += thisahrs.aglobal.b * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.c > accCutoff) {
+    velocity[1] += thisahrs.aglobal.c * (micros()-lastTime) / 1000000.0;
+  }
+  if (thisahrs.aglobal.d > accCutoff) {
+    velocity[2] += thisahrs.aglobal.d * (micros()-lastTime) / 1000000.0;
+  }
 
-  // if (count % 1 == 0) {
-  //   Serial.write((const uint8_t *)&data, sizeof(data));
-  //   Serial2.write((const uint8_t *)&data, sizeof(data));
+  /*
 
-  //   if (sen.sdexists) {
-  //     sen.f.close();
-  //     sen.f = sen.sd.open(sen.fileName, FILE_WRITE);
-  //   }
-  // }
+  if (count % 15 == 0) {
+    //Serial.write((const uint8_t *)&data, sizeof(data));
+    Serial2.write((const uint8_t *)&data, sizeof(data));
+
+    if (sen.sdexists) {
+      sen.f.flush();
+    }
+  }
 
   count += 1;
+  */
+ tCount++;
 }
