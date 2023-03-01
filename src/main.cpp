@@ -51,6 +51,10 @@ unsigned long previousTime = 0;
 double am[3];
 double wm[3];
 int count = 0;
+uint32_t bCount = 0;
+uint32_t aCount = 0;
+uint32_t gCount = 0;
+uint32_t mCount = 0;
 int start;
 
 const int led = 13;
@@ -60,6 +64,10 @@ bool ledOn;
 Ahrs thisahrs;
 Sensors sen;
 
+const uint8_t acc_int_pin = 9;
+volatile bool acc_interrupt = false;
+const uint8_t gyro_int_pin = 10;
+volatile bool gyro_interrupt = false;
 const uint8_t baro_int_pin = 31;
 volatile bool baro_interrupt = false;
 const uint8_t mag_int_pin = 40;
@@ -73,6 +81,14 @@ void magInterruptHandler() {
     mag_interrupt = true;
 }
 
+void accInterruptHandler() {
+    acc_interrupt = true;
+}
+
+void gyroInterruptHandler() {
+    gyro_interrupt = true;
+}
+
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200);
@@ -84,8 +100,12 @@ void setup() {
   Serial.println("Starting ...");
   pinMode(baro_int_pin, INPUT);
   pinMode(mag_int_pin, INPUT);
+  pinMode(acc_int_pin, INPUT);
+  pinMode(gyro_int_pin, INPUT);
   attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(acc_int_pin), accInterruptHandler, RISING);
+  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 }
 
 Quaternion orientation = Quaternion();
@@ -155,23 +175,31 @@ void loop() {
     }
 
   if (baro_interrupt) {
-    //count++;
+    bCount++;
     baro_interrupt = false;
   }
+  if (acc_interrupt) {
+    aCount++;
+    acc_interrupt = false;
+  }
+  if (gyro_interrupt) {
+    gCount++;
+    gyro_interrupt = false;
+  }
   if (mag_interrupt) {
-    count++;
+    mCount++;
     mag_interrupt = false;
     mag.clearMeasDoneInterrupt();
-    uint32_t rawValueX = 0;
-    uint32_t rawValueY = 0;
-    uint32_t rawValueZ = 0;
-    mag.readFieldsXYZ(&rawValueX, &rawValueY, &rawValueZ);
   }
     //count++;
   if (micros() - lastTime >= 1000000) {
-    Serial.print("HZ:\t"); Serial.println(count);
+    Serial.println("\tAcc:\tGyro:\tBaro:\tMag:");
+    Serial.print("HZ:\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.println(mCount);
     lastTime = micros();
-    count = 0;
+    aCount = 0;
+    gCount = 0;
+    bCount = 0;
+    mCount = 0;
   }
 
   /*

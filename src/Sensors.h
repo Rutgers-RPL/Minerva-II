@@ -71,6 +71,10 @@ class Sensors{
                 delay(1000);
                 status = accel.begin();
             }
+            accel.setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
+            accel.pinModeInt1(Bmi088Accel::PUSH_PULL,Bmi088Accel::ACTIVE_HIGH);
+            accel.mapDrdyInt1(true);
+
             status = gyro.begin();
             while (status < 0) {
                 Serial.println("Gyro Initialization Error");
@@ -78,6 +82,9 @@ class Sensors{
                 delay(1000);
                 status = gyro.begin();
             }
+            gyro.setOdr(Bmi088Gyro::ODR_2000HZ_BW_532HZ);
+            gyro.pinModeInt3(Bmi088Gyro::PUSH_PULL,Bmi088Gyro::ACTIVE_HIGH);
+            gyro.mapDrdyInt3(true);
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);
@@ -118,7 +125,7 @@ class Sensors{
             }
             mag.softReset();
             mag.performResetOperation();
-            mag.setFilterBandwidth(400);
+            mag.setFilterBandwidth(800);
             mag.setContinuousModeFrequency(1000);
             mag.enableContinuousMode();
             mag.enableInterrupt();
