@@ -59,12 +59,13 @@ class Sensors{
             short y = readShort(2);
             short z = readShort(4);
 
-            magRot = Quaternion::from_euler_rotation(0, 0, 0);
-            magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
+            // magRot = Quaternion::from_euler_rotation(0, 0, 0);
+            // magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
             allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
 
             int status;
             status = accel.begin();
+            status = accel.setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
             while (status < 0) {
                 Serial.println("Accel Initialization Error");
                 Serial.println(status);
@@ -88,6 +89,7 @@ class Sensors{
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);
+            status = baro.setODRFrequency(BMP5_ODR_240_HZ);
             while (status != BMP5_OK) {
                 Serial.println("Baro Initialization Error");
                 Serial.println(status);
@@ -143,24 +145,27 @@ class Sensors{
             gps.setNavigationFrequency(18);
             gps.saveConfiguration();
             Serial.println("Sensor initialization complete...");
+
+            gps.setI2COutput(COM_TYPE_UBX);
+            gps.setNavigationFrequency(10);
+            gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
+
         }
 
         Vec3 readAccel(){
             /* read the accel */
             accel.readSensor();
             Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(), accel.getAccelZ_mss());
-            // q = imuRot.rotate(q);
-            // q = allRot.rotate(q);
-            // q = imuRot.rotate(q);
-            // q = allRot.rotate(q);
+            
+            //q = imuRot.rotate(q);
+            //q = allRot.rotate(q);
 
             return Vec3(q.b, q.c, q.d);
         }
 
         Vec3 readGyro(){
             gyro.readSensor();
-
-            Quaternion q(gyro.getGyroX_rads(),gyro.getGyroY_rads(),gyro.getGyroZ_rads());
+            Quaternion q(gyro.getGyroX_rads(), gyro.getGyroY_rads(), gyro.getGyroZ_rads());
             // q = imuRot.rotate(q);
             // q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);

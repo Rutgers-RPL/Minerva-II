@@ -16,6 +16,9 @@
 #include <Vec3.h>
 #include <Ahrs.h>
 #include <Sensors.h>
+#include <kf.h>
+#include <bkf.h>
+#include <BasicLinearAlgebra.h>
 
 #define _g_ (9.80665)
 
@@ -72,12 +75,36 @@ const int led = 13;
 long blinkCounter;
 bool ledOn;
 
+float initialAltitude = 0.0;
+uint32_t accTime = 0.0;
+uint32_t altTime = 0.0;
+uint32_t lastTime = 0.0;
+uint32_t printTime = 0.0;
 Ahrs thisahrs;
 Sensors sen;
+KalmanFilter kf;
+BetterKalmanFilter bkf;
 bool firstGPS = true;
 float xOffset = 0.0;
 float yOffset = 0.0;
 float zOffset = 0.0;
+
+void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
+  if (firstGPS) {
+    xOffset = ubxDataStruct->ecefX/100.0;
+    yOffset = ubxDataStruct->ecefY/100.0;
+    zOffset = ubxDataStruct->ecefZ/100.0;
+    firstGPS = false;
+  } else {
+    Serial.println();
+    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
+    Serial.println("\t\tX\tY\tZ");
+    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
+
+    //kf.updateGPS(micros() - lastTime, ubxDataStruct)
+  }
+}
+  
 float lat = 0.0;
 float lon = 0.0;
 uint32_t gpsTime = 0;
@@ -135,6 +162,8 @@ void setup() {
   sen.beginSD();
   Serial.println("test");
   Serial2.flush();
+  delay(500);
+  initialAltitude = sen.readAltitude();
   Serial.println("Starting ...");
   //Serial.println(gps.setAutoPVTcallbackPtr(&printPVTData));
   while (!gps.setAutoPVTcallbackPtr(&printPVTData)) {
@@ -156,7 +185,7 @@ void setup() {
 
 
 Quaternion orientation = Quaternion();
-long lastTime = micros();
+//long lastTime = micros();
 double threshold = 0.05;
 
 void loop() {
@@ -209,7 +238,6 @@ void loop() {
   }
 
   Quaternion groundToSensorFrame = orientation;
-
 
   //data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
