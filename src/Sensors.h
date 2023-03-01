@@ -25,6 +25,7 @@ const uint8_t acc_cs = 37;
 const uint8_t gyr_cs = 36;
 const uint8_t mag_cs = 38;
 
+
 /* accel object */
 Bmi088Accel accel(SPI, acc_cs);
 /* gyro object */
@@ -35,7 +36,6 @@ BMP581 baro;
 SFE_MMC5983MA mag;
 /* gps object*/
 SFE_UBLOX_GNSS gps;
-
 
 
 class Sensors{
@@ -71,6 +71,10 @@ class Sensors{
                 delay(1000);
                 status = accel.begin();
             }
+            accel.setOdr(Bmi088Accel::ODR_1600HZ_BW_280HZ);
+            accel.pinModeInt1(Bmi088Accel::PUSH_PULL,Bmi088Accel::ACTIVE_HIGH);
+            accel.mapDrdyInt1(true);
+
             status = gyro.begin();
             while (status < 0) {
                 Serial.println("Gyro Initialization Error");
@@ -78,6 +82,9 @@ class Sensors{
                 delay(1000);
                 status = gyro.begin();
             }
+            gyro.setOdr(Bmi088Gyro::ODR_2000HZ_BW_532HZ);
+            gyro.pinModeInt3(Bmi088Gyro::PUSH_PULL,Bmi088Gyro::ACTIVE_HIGH);
+            gyro.mapDrdyInt3(true);
 
             Wire2.begin();
             status = baro.beginI2C(baro_i2c_address, Wire2);
@@ -87,6 +94,22 @@ class Sensors{
                 delay(1000);
                 status = baro.beginI2C(baro_i2c_address, Wire2);
             }
+            baro.setODRFrequency(BMP5_ODR_240_HZ);
+            BMP581_InterruptConfig interruptConfig =
+            {
+                .enable   = BMP5_INTR_ENABLE,    // Enable interrupts
+                .drive    = BMP5_INTR_PUSH_PULL, // Push-pull or open-drain
+                .polarity = BMP5_ACTIVE_HIGH,    // Active low or high
+                .mode     = BMP5_PULSED,         // Latch or pulse signal
+                .sources  =
+                {
+                    .drdy_en = BMP5_ENABLE,        // Trigger interrupts when data is ready
+                    .fifo_full_en = BMP5_DISABLE,  // Trigger interrupts when FIFO is full
+                    .fifo_thres_en = BMP5_DISABLE, // Trigger interrupts when FIFO threshold is reached
+                    .oor_press_en = BMP5_DISABLE    // Trigger interrupts when pressure goes out of range
+                }
+            };
+            baro.setInterruptConfig(&interruptConfig);
 
             SPI1.setCS(38);
             SPI1.setSCK(27);
@@ -100,7 +123,13 @@ class Sensors{
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
+            mag.softReset();
             mag.performResetOperation();
+            mag.setFilterBandwidth(800);
+            mag.setContinuousModeFrequency(1000);
+            mag.enableContinuousMode();
+            mag.enableInterrupt();
+            
 
             status = gps.begin(Wire2, gps_i2c_address);
             while (!status) {
@@ -119,6 +148,8 @@ class Sensors{
             Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(), accel.getAccelZ_mss());
             // q = imuRot.rotate(q);
             // q = allRot.rotate(q);
+            // q = imuRot.rotate(q);
+            // q = allRot.rotate(q);
 
             return Vec3(q.b, q.c, q.d);
         }
@@ -133,10 +164,10 @@ class Sensors{
         }
 
         Vec3 readMag(){
-            uint32_t x = mag.getMeasurementX();
-            uint32_t y = mag.getMeasurementY();
-            uint32_t z = -1.0 * mag.getMeasurementZ();
-            //sBmm150MagData_t magData = mag.getGeomagneticData();
+            uint32_t x;
+            uint32_t y;
+            uint32_t z;
+            mag.readFieldsXYZ(&x, &y, &z);
             Quaternion q(x, y, z);
             // q = magRot.rotate(q);
             // q = allRot.rotate(q);
