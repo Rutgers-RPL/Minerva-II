@@ -140,7 +140,7 @@ class Sensors{
             }
             gps.setI2COutput(COM_TYPE_UBX);
             gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
-            gps.setNavigationFrequency(10);
+            gps.setNavigationFrequency(18);
             gps.saveConfiguration();
             Serial.println("Sensor initialization complete...");
         }

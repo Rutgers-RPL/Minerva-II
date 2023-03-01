@@ -34,14 +34,20 @@ typedef struct {
   float magy; // 4 bytes - 46
   float magz; // 4 bytes - 50
   float baro_alt; // 4 bytes - 54
-  float gps_alt;
   float temp; // 4 bytes - 58
   float w; // 4 bytes - 62
   float x; // 4 bytes - 66
   float y; // 4 bytes - 70
   float z; // 4 bytes - 74
+  byte numSatellites;
+  byte gpsFixType;
+  float latitude;
+  float longitude;
+  float hMSL;
   unsigned int checksum; // 4 bytes - 78
 } __attribute__((packed)) realPacket;
+
+realPacket packet;
 
 FastCRC32 CRC32;
 
@@ -55,6 +61,8 @@ uint32_t bCount = 0;
 uint32_t aCount = 0;
 uint32_t gCount = 0;
 uint32_t mCount = 0;
+uint32_t tCount = 0;
+uint32_t gpsCount = 0;
 int start;
 double accCutoff = 0.05;
 double velocity[3];
@@ -72,32 +80,26 @@ float yOffset = 0.0;
 float zOffset = 0.0;
 float lat = 0.0;
 float lon = 0.0;
+uint32_t gpsTime = 0;
 
-void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
-  if (firstGPS) {
-    xOffset = ubxDataStruct->ecefX/100.0;
-    yOffset = ubxDataStruct->ecefY/100.0;
-    zOffset = ubxDataStruct->ecefZ/100.0;
-    firstGPS = false;
+void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
+  gpsCount++;
+  if (ubxDataStruct->iTOW == gpsTime) {
+    Serial.println("Too fast for GPS.");
   } else {
-    Serial.println();
-    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
-    Serial.println("\t\tX\tY\tZ");
-    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
+    //Serial.println("GPS Good.");
   }
+  gpsTime = ubxDataStruct->iTOW;
+  packet.hMSL = ubxDataStruct->hMSL / 1000.0;
+  packet.numSatellites = ubxDataStruct->numSV;
+  packet.latitude = ubxDataStruct->lat * 1e-7;
+  packet.longitude = ubxDataStruct->lon * 1e-7;
+  packet.gpsFixType = ubxDataStruct->fixType;
 }
-  void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
-    Serial.println("I made it to the callback");
-    if(firstGPS) {
-      lat = ubxDataStruct->lat;
-      lon = ubxDataStruct->lon;
-      firstGPS=false;
-    } else {
-      Serial.println();
-      Serial.print("Latitude: "); Serial.println(lat);
-      Serial.print("Longitude: "); Serial.println(lon);
-    }
-  }
+void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
+  Serial.print("Latitude: "); Serial.println(ubxDataStruct->lat);
+  Serial.print("Longitude: "); Serial.println(ubxDataStruct->lon);
+}
 
 
 const uint8_t acc_int_pin = 9;
@@ -134,9 +136,13 @@ void setup() {
   Serial.println("test");
   Serial2.flush();
   Serial.println("Starting ...");
-  Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
+  //Serial.println(gps.setAutoPVTcallbackPtr(&printPVTData));
+  while (!gps.setAutoPVTcallbackPtr(&printPVTData)) {
+    delay(1000);
+    Serial.println("Retrying...");
+  }
+  //Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
   //Serial.print("Got data");
-  //gps.setAutoNAVPOSECEFcallbackPtr(&printECEFData);
   pinMode(baro_int_pin, INPUT);
   pinMode(mag_int_pin, INPUT);
   pinMode(acc_int_pin, INPUT);
@@ -157,7 +163,6 @@ void loop() {
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
 
-
   if (millis() - blinkCounter >= 500) {
     if (ledOn) {
       ledOn = false;
@@ -169,24 +174,6 @@ void loop() {
     blinkCounter = millis();
   }
 
-  // if (baro_interrupt) {
-  //   bCount++;
-  //   baro_interrupt = false;
-  // }
-  // if (acc_interrupt) {
-  //   aCount++;
-  //   acc_interrupt = false;
-  // }
-  // if (gyro_interrupt) {
-  //   gCount++;
-  //   gyro_interrupt = false;
-  // }
-  // if (mag_interrupt) {
-  //   mCount++;
-  //   mag_interrupt = false;
-  //   mag.clearMeasDoneInterrupt();
-  // }
-
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
     aCount++;
     gCount++;
@@ -194,15 +181,29 @@ void loop() {
     acc_interrupt = false;
     gyro_interrupt = false;
     mag_interrupt = false;
-    Vec3 magr = sen.readMag();
     mag.clearMeasDoneInterrupt();
-    Vec3 acc = sen.readAccel();
-    Vec3 gyr = sen.readGyro();
-    thisahrs.update(acc,gyr,magr);
+    Vec3 magVec = sen.readMag();
+    Vec3 accVec = sen.readAccel();
+    Vec3 gyrVec = sen.readGyro();
+    thisahrs.update(accVec,gyrVec,magVec);
     orientation = thisahrs.q;
+    packet.accx = accVec.x;
+    packet.accy = accVec.y;
+    packet.accz = accVec.z;
+    packet.avelx = gyrVec.x;
+    packet.avely = gyrVec.y;
+    packet.avelz = gyrVec.z;
+    packet.magx = magVec.x;
+    packet.magy = magVec.y;
+    packet.magz = magVec.z;
+    packet.w = orientation.a;
+    packet.x = orientation.b;
+    packet.y = orientation.c;
+    packet.z = orientation.d;
   }
 
   if (baro_interrupt) {
+    packet.baro_alt = sen.readAltitude();
     bCount++;
     baro_interrupt = false;
   }
@@ -212,32 +213,38 @@ void loop() {
 
   //data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
   
-  // if (sen.sdexists && sen.f) {
-  //   sen.f.print(data.time); sen.f.print(","); sen.f.print(data.code); sen.f.print(","); sen.f.print(data.voltage); sen.f.print(",");
-  //   sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
-  //   sen.f.print(data.accx); sen.f.print(","); sen.f.print(data.accy); sen.f.print(","); sen.f.print(data.accz); sen.f.print(",");
-  //   sen.f.print(data.avelx); sen.f.print(","); sen.f.print(data.avely); sen.f.print(","); sen.f.print(data.avelz); sen.f.print(",");
-  //   sen.f.print(data.magx); sen.f.print(","); sen.f.print(data.magy); sen.f.print(","); sen.f.print(data.magz); sen.f.print(",");
-  //   sen.f.print(data.baro_alt); sen.f.print(","); sen.f.print(data.temp); sen.f.print(",");
-  //   sen.f.print(data.w); sen.f.print(","); sen.f.print(data.x); sen.f.print(","); sen.f.print(data.y); sen.f.print(","); sen.f.print(data.z); sen.f.println(",");
-  // } else {
-  //   //Serial.println("No sd writing");
-  //   data.code = -1;
-  //   data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  // }
+  if (sen.sdexists && sen.f) {
+    sen.f.print(packet.time); sen.f.print(","); sen.f.print(packet.code); sen.f.print(","); sen.f.print(packet.voltage); sen.f.print(",");
+    // sen.f.print(acc.x); sen.f.print(","); sen.f.print(acc.y); sen.f.print(","); sen.f.print(acc.z); sen.f.print(",");
+    sen.f.print(packet.accx); sen.f.print(","); sen.f.print(packet.accy); sen.f.print(","); sen.f.print(packet.accz); sen.f.print(",");
+    sen.f.print(packet.avelx); sen.f.print(","); sen.f.print(packet.avely); sen.f.print(","); sen.f.print(packet.avelz); sen.f.print(",");
+    sen.f.print(packet.magx); sen.f.print(","); sen.f.print(packet.magy); sen.f.print(","); sen.f.print(packet.magz); sen.f.print(",");
+    sen.f.print(packet.baro_alt); sen.f.print(","); sen.f.print(packet.temp); sen.f.print(",");
+    sen.f.print(packet.w); sen.f.print(","); sen.f.print(packet.x); sen.f.print(","); sen.f.print(packet.y); sen.f.print(","); sen.f.print(packet.z); sen.f.println(",");
+  } else {
+    //Serial.println("No sd writing");
+    // data.code = -1;
+    // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+  }
 
-  if (sen.sdexists) {
-      //sen.f.flush();
+  if (sen.sdexists && micros() - lastTime >= 1000000) {
+    sen.f.flush();
   }
     //count++;
   if (micros() - lastTime >= 1000000) {
-    Serial.println("\tAcc:\tGyro:\tBaro:\tMag:");
-    Serial.print("HZ:\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.println(mCount);
+    Serial.println();
+    Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
+    Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
+    Serial.print("Int:\t\t"); Serial.print(acc_interrupt); Serial.print("\t"); Serial.print(gyro_interrupt); Serial.print("\t"); Serial.print(baro_interrupt); Serial.print("\t"); Serial.println(mag_interrupt);
+    Serial.println("\thMSL:\tLat:\tLon:\tFix:\tSat:\tBaro:");
+    Serial.print("Packet:\t"); Serial.print(packet.hMSL); Serial.print("\t"); Serial.print(packet.latitude); Serial.print("\t"); Serial.print(packet.longitude); Serial.print("\t"); Serial.print(packet.gpsFixType); Serial.print("\t"); Serial.print(packet.numSatellites); Serial.print("\t"); Serial.println(packet.baro_alt);
     lastTime = micros();
+    tCount = 0;
     aCount = 0;
     gCount = 0;
     bCount = 0;
     mCount = 0;
+    gpsCount = 0;
   }
 
   
@@ -264,4 +271,5 @@ void loop() {
 
   count += 1;
   */
+ tCount++;
 }
