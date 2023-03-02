@@ -146,10 +146,6 @@ class Sensors{
             gps.saveConfiguration();
             Serial.println("Sensor initialization complete...");
 
-            gps.setI2COutput(COM_TYPE_UBX);
-            gps.setNavigationFrequency(10);
-            gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
-
         }
 
         Vec3 readAccel(){

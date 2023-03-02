@@ -17,7 +17,6 @@
 #include <Ahrs.h>
 #include <Sensors.h>
 #include <kf.h>
-#include <bkf.h>
 #include <BasicLinearAlgebra.h>
 
 #define _g_ (9.80665)
@@ -47,6 +46,9 @@ typedef struct {
   float latitude;
   float longitude;
   float hMSL;
+  float kfAcc;
+  float kfVel;
+  float kfPos;
   unsigned int checksum; // 4 bytes - 78
 } __attribute__((packed)) realPacket;
 
@@ -71,42 +73,21 @@ double accCutoff = 0.05;
 double velocity[3];
 double position[3];
 
-const int led = 13;
+const int led = 0;
 long blinkCounter;
 bool ledOn;
+bool firstGPS = true;
 
 float initialAltitude = 0.0;
-uint32_t accTime = 0.0;
-uint32_t altTime = 0.0;
-uint32_t lastTime = 0.0;
-uint32_t printTime = 0.0;
+float initialHMSL = 0.0;
+uint32_t accTime = 0;
+uint32_t altTime = 0;
+uint32_t lastTime = 0;
+uint32_t printTime = 0;
+uint32_t kfTime = 0;
 Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
-BetterKalmanFilter bkf;
-bool firstGPS = true;
-float xOffset = 0.0;
-float yOffset = 0.0;
-float zOffset = 0.0;
-
-void printECEFData(UBX_NAV_POSECEF_data_t *ubxDataStruct) {
-  if (firstGPS) {
-    xOffset = ubxDataStruct->ecefX/100.0;
-    yOffset = ubxDataStruct->ecefY/100.0;
-    zOffset = ubxDataStruct->ecefZ/100.0;
-    firstGPS = false;
-  } else {
-    Serial.println();
-    Serial.print("Time:\t"); Serial.println(ubxDataStruct->iTOW);
-    Serial.println("\t\tX\tY\tZ");
-    Serial.print("ECEF (m):\t"); Serial.print(ubxDataStruct->ecefX/100.0 - xOffset); Serial.print("\t"); Serial.print(ubxDataStruct->ecefY/100.0 - yOffset); Serial.print("\t"); Serial.println(ubxDataStruct->ecefZ/100.0 - zOffset);
-
-    //kf.updateGPS(micros() - lastTime, ubxDataStruct)
-  }
-}
-  
-float lat = 0.0;
-float lon = 0.0;
 uint32_t gpsTime = 0;
 
 void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
@@ -122,12 +103,22 @@ void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   packet.latitude = ubxDataStruct->lat * 1e-7;
   packet.longitude = ubxDataStruct->lon * 1e-7;
   packet.gpsFixType = ubxDataStruct->fixType;
+  //Serial.println(ubxDataStruct->velD / 1000.0);
+  // if (firstGPS && packet.gpsFixType != 0) {
+  //   firstGPS = false;
+  //   initialHMSL = packet.hMSL;
+  // }
+  // if (!firstGPS) {
+  //   //Serial.println(packet.hMSL - initialHMSL);
+  //   kf.H = {1.0, 0.0, 0.0};
+  //   kf.update((micros() - kfTime) / 1000000.0, packet.hMSL - initialHMSL);
+  //   kfTime = micros();
+  // }
 }
 void printPVATData(UBX_NAV_PVAT_data_t *ubxDataStruct){
   Serial.print("Latitude: "); Serial.println(ubxDataStruct->lat);
   Serial.print("Longitude: "); Serial.println(ubxDataStruct->lon);
 }
-
 
 const uint8_t acc_int_pin = 9;
 volatile bool acc_interrupt = false;
@@ -165,13 +156,11 @@ void setup() {
   delay(500);
   initialAltitude = sen.readAltitude();
   Serial.println("Starting ...");
-  //Serial.println(gps.setAutoPVTcallbackPtr(&printPVTData));
   while (!gps.setAutoPVTcallbackPtr(&printPVTData)) {
     delay(1000);
     Serial.println("Retrying...");
   }
-  //Serial.println(gps.setAutoNAVPVATcallbackPtr(&printPVATData));
-  //Serial.print("Got data");
+  initialAltitude = sen.readAltitude();
   pinMode(baro_int_pin, INPUT);
   pinMode(mag_int_pin, INPUT);
   pinMode(acc_int_pin, INPUT);
@@ -182,11 +171,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 }
 
-
-
 Quaternion orientation = Quaternion();
-//long lastTime = micros();
-double threshold = 0.05;
 
 void loop() {
   gps.checkUblox(); // Check for the arrival of new data and process it.
@@ -203,14 +188,17 @@ void loop() {
     blinkCounter = millis();
   }
 
+  kf.predict((micros() - kfTime) / 1000000.0);
+  kfTime = micros();
+
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
-    aCount++;
-    gCount++;
-    mCount++;
+    mag.clearMeasDoneInterrupt();
     acc_interrupt = false;
     gyro_interrupt = false;
     mag_interrupt = false;
-    mag.clearMeasDoneInterrupt();
+    aCount++;
+    gCount++;
+    mCount++;
     Vec3 magVec = sen.readMag();
     Vec3 accVec = sen.readAccel();
     Vec3 gyrVec = sen.readGyro();
@@ -229,12 +217,21 @@ void loop() {
     packet.x = orientation.b;
     packet.y = orientation.c;
     packet.z = orientation.d;
+
+    //kf.predict((micros() - kfTime) / 1000000.0);
+    kf.H = {0.0, 0.0, 1.0};
+    kf.update((micros() - kfTime) / 1000000.0, thisahrs.aglobal.d);
+    kfTime = micros();
   }
 
   if (baro_interrupt) {
-    packet.baro_alt = sen.readAltitude();
-    bCount++;
     baro_interrupt = false;
+    bCount++;
+    packet.baro_alt = sen.readAltitude();
+    //kf.predict((micros() - kfTime) / 1000000.0);
+    kf.H = {1.0, 0.0, 0.0};
+    kf.update((micros() - kfTime) / 1000000.0, packet.baro_alt - initialAltitude);
+    kfTime = micros();
   }
 
   Quaternion groundToSensorFrame = orientation;
@@ -266,7 +263,10 @@ void loop() {
     Serial.print("Int:\t\t"); Serial.print(acc_interrupt); Serial.print("\t"); Serial.print(gyro_interrupt); Serial.print("\t"); Serial.print(baro_interrupt); Serial.print("\t"); Serial.println(mag_interrupt);
     Serial.println("\thMSL:\tLat:\tLon:\tFix:\tSat:\tBaro:");
     Serial.print("Packet:\t"); Serial.print(packet.hMSL); Serial.print("\t"); Serial.print(packet.latitude); Serial.print("\t"); Serial.print(packet.longitude); Serial.print("\t"); Serial.print(packet.gpsFixType); Serial.print("\t"); Serial.print(packet.numSatellites); Serial.print("\t"); Serial.println(packet.baro_alt);
+    Serial.println("\tAcc:\tVel:\tPos:");
+    Serial.print("KF:\t"); Serial.print(kf.X(0,2)); Serial.print("\t"); Serial.print(kf.X(0,1)); Serial.print("\t"); Serial.println(kf.X(0,0));
     lastTime = micros();
+    Serial2.println("Hello World.");
     tCount = 0;
     aCount = 0;
     gCount = 0;
@@ -286,18 +286,13 @@ void loop() {
     velocity[2] += thisahrs.aglobal.d * (micros()-lastTime) / 1000000.0;
   }
 
+  
   /*
-
   if (count % 15 == 0) {
     //Serial.write((const uint8_t *)&data, sizeof(data));
     Serial2.write((const uint8_t *)&data, sizeof(data));
-
-    if (sen.sdexists) {
-      sen.f.flush();
-    }
   }
-
-  count += 1;
   */
+
  tCount++;
 }
