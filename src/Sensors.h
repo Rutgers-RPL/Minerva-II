@@ -8,6 +8,7 @@
 #include <EEPROM.h>
 #include <filters.h>
 #include <string.h>
+#include <structs.h>
 
 #include <BMI088.h>
 #include <SparkFun_BMP581_Arduino_Library.h>
@@ -171,11 +172,26 @@ class Sensors{
         }
 
         Vec3 readMag(){
-            uint32_t x;
-            uint32_t y;
-            uint32_t z;
-            mag.readFieldsXYZ(&x, &y, &z);
-            Quaternion q(x, y, z);
+            uint32_t raw_x;
+            uint32_t raw_y;
+            uint32_t raw_z;
+            float normalized_x;
+            float normalized_y;
+            float normalized_z;
+            // use readMeasurement if not using interrupts
+            mag.readFieldsXYZ(&raw_x, &raw_y, &raw_z);
+            normalized_x = (double)raw_x - 131072.0;
+            normalized_x /= 131072.0;
+            normalized_x *= 8.0;
+
+            normalized_y = (double)raw_y - 131072.0;
+            normalized_y /= 131072.0;
+            normalized_y *= 8.0;
+
+            normalized_z = (double)raw_z - 131072.0;
+            normalized_z /= 131072.0;
+            normalized_z *= 8.0;
+            Quaternion q(normalized_x, normalized_y, normalized_z);
             // q = magRot.rotate(q);
             // q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
@@ -263,6 +279,70 @@ class Sensors{
                     break;
                 }
             }
+        }
+
+        void logPacket(const minerva_II_packet packet) {
+            f.print(packet.magic); f.print(","); 
+            f.print(packet.code); f.print(","); 
+            f.print(packet.time_us); f.print(",");
+            f.print(packet.voltage_v); f.print(",");
+            f.print(packet.numSatellites); f.print(",");
+            f.print(packet.gpsFixType); f.print(",");
+            f.print(packet.latitude_degrees); f.print(",");
+            f.print(packet.longitude_degrees); f.print(",");
+            f.print(packet.gps_hMSL_m); f.print(",");
+            f.print(packet.barometer_hMSL_m); f.print(",");
+            f.print(packet.temperature_c); f.print(",");
+            f.print(packet.acceleration_x_mss); f.print(",");
+            f.print(packet.acceleration_y_mss); f.print(",");
+            f.print(packet.acceleration_z_mss); f.print(",");
+            f.print(packet.angular_velocity_x_rads); f.print(",");
+            f.print(packet.angular_velocity_y_rads); f.print(",");
+            f.print(packet.angular_velocity_z_rads); f.print(",");
+            f.print(packet.gauss_x); f.print(",");
+            f.print(packet.gauss_y); f.print(",");
+            f.print(packet.gauss_z); f.print(",");
+            f.print(packet.kf_acceleration_mss); f.print(",");
+            f.print(packet.kf_velocity_ms); f.print(",");
+            f.print(packet.kf_position_m); f.print(",");
+            f.print(packet.w); f.print(",");
+            f.print(packet.x); f.print(",");
+            f.print(packet.y); f.print(",");
+            f.print(packet.z); f.print(",");
+            f.print(packet.checksum); f.print(",");
+            f.println();
+        }
+
+        void printPacket(const minerva_II_packet packet) {
+            Serial.print(packet.magic); Serial.print("\t"); 
+            Serial.print(packet.code); Serial.print("\t"); 
+            Serial.print(packet.time_us); Serial.print("\t");
+            Serial.print(packet.voltage_v); Serial.print("\t");
+            Serial.print(packet.numSatellites); Serial.print("\t");
+            Serial.print(packet.gpsFixType); Serial.print("\t");
+            Serial.print(packet.latitude_degrees); Serial.print("\t");
+            Serial.print(packet.longitude_degrees); Serial.print("\t");
+            Serial.print(packet.gps_hMSL_m); Serial.print("\t");
+            Serial.print(packet.barometer_hMSL_m); Serial.print("\t");
+            Serial.print(packet.temperature_c); Serial.print("\t");
+            Serial.print(packet.acceleration_x_mss); Serial.print("\t");
+            Serial.print(packet.acceleration_y_mss); Serial.print("\t");
+            Serial.print(packet.acceleration_z_mss); Serial.print("\t");
+            Serial.print(packet.angular_velocity_x_rads); Serial.print("\t");
+            Serial.print(packet.angular_velocity_y_rads); Serial.print("\t");
+            Serial.print(packet.angular_velocity_z_rads); Serial.print("\t");
+            Serial.print(packet.gauss_x); Serial.print("\t");
+            Serial.print(packet.gauss_y); Serial.print("\t");
+            Serial.print(packet.gauss_z); Serial.print("\t");
+            Serial.print(packet.kf_acceleration_mss); Serial.print("\t");
+            Serial.print(packet.kf_velocity_ms); Serial.print("\t");
+            Serial.print(packet.kf_position_m); Serial.print("\t");
+            Serial.print(packet.w); Serial.print("\t");
+            Serial.print(packet.x); Serial.print("\t");
+            Serial.print(packet.y); Serial.print("\t");
+            Serial.print(packet.z); Serial.print("\t");
+            Serial.print(packet.checksum); Serial.print("\t");
+            Serial.println();
         }
 
 
