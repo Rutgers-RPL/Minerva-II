@@ -40,11 +40,11 @@ class Ahrs{
             acc = acc * (1/_g_);
 
             double time2 = micros();
-            double delta = ((double)(time2-lastTime))/1000000;
+            double delta = ((double)(time2-lastTime))/1000000.0;
             lastTime = time2;
 
             double K;
-            if(time2/1000000 < tinit) K = Knorm + ((tinit-(time2/1000000))/tinit)*(Kinit - Knorm);
+            if(time2/1000000.0 < tinit) K = Knorm + ((tinit-(time2/1000000.0))/tinit)*(Kinit - Knorm);
             else K = Knorm;
 
             Vec3 wprime = gyr + (gyroffset * (-1));

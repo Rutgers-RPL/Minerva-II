@@ -1,5 +1,6 @@
 #ifndef KalmanFilter_H
 #define KalmanFilter_H
+
 #include <BasicLinearAlgebra.h>
 
 class KalmanFilter {

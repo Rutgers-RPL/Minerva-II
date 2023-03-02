@@ -17,7 +17,8 @@
 #define FILE_BASE_NAME "FlightLog_"
 const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
 
-const uint8_t batteryPin = 22;
+const uint8_t batteryPin = 21;
+const uint8_t pyroBatteryPin = 22;
 const uint8_t baro_i2c_address = 0x46;
 const uint8_t gps_i2c_address = 0x42;
 
@@ -55,13 +56,14 @@ class Sensors{
         char* fileName = FILE_BASE_NAME "0000.csv";
 
         Sensors(){
-            short x = readShort(0);
-            short y = readShort(2);
-            short z = readShort(4);
+            // Turns off digital input logic circuitry so it doesn't interfere with the analog signal
+            pinMode(batteryPin, INPUT_DISABLE);
+            pinMode(pyroBatteryPin, INPUT_DISABLE);
+
 
             // magRot = Quaternion::from_euler_rotation(0, 0, 0);
             // magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
-            allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
+            // allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
 
             int status;
             status = accel.begin();
@@ -83,7 +85,7 @@ class Sensors{
                 delay(1000);
                 status = gyro.begin();
             }
-            gyro.setOdr(Bmi088Gyro::ODR_2000HZ_BW_532HZ);
+            gyro.setOdr(Bmi088Gyro::ODR_1000HZ_BW_116HZ);
             gyro.pinModeInt3(Bmi088Gyro::PUSH_PULL,Bmi088Gyro::ACTIVE_HIGH);
             gyro.mapDrdyInt3(true);
 
@@ -113,7 +115,7 @@ class Sensors{
             };
             baro.setInterruptConfig(&interruptConfig);
 
-            SPI1.setCS(38);
+            SPI1.setCS(mag_cs);
             SPI1.setSCK(27);
             SPI1.setMISO(39);
             SPI1.setMOSI(26);
@@ -144,6 +146,7 @@ class Sensors{
             gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
             gps.setNavigationFrequency(18);
             gps.saveConfiguration();
+
             Serial.println("Sensor initialization complete...");
 
         }
@@ -209,43 +212,56 @@ class Sensors{
             return data.temperature;//(accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
         }
 
-        float readVoltage(){
-            return (15.721519 * ((double) analogRead(batteryPin) / 1023.0));
+        float readBatteryVoltage(){
+            return 4.0 * ((float) analogRead(batteryPin) * (3.3 / 1024.0));
+        }
+
+        float readPyroBatteryVoltage() {
+            return 4.0 * ((float) analogRead(pyroBatteryPin) * (3.3 / 1024.0));
         }
 
 
         void beginSD() {
-            if (!sd.begin(SdioConfig(FIFO_SDIO))) {
-                Serial.println("SD Begin Failed");
-            } else {
-                Serial.println("\nFIFO SDIO mode.");
-                while (sd.exists(fileName)) {
-                    if (fileName[BASE_NAME_SIZE + 3] != '9') {
-                        fileName[BASE_NAME_SIZE + 3]++;
-                    } else if (fileName[BASE_NAME_SIZE + 2] != '9') {
-                        fileName[BASE_NAME_SIZE + 3] = '0';
-                        fileName[BASE_NAME_SIZE + 2]++;
-                    } else if (fileName[BASE_NAME_SIZE + 1] != '9') {
-                        fileName[BASE_NAME_SIZE + 2] = '0';
-                        fileName[BASE_NAME_SIZE + 3] = '0';
-                        fileName[BASE_NAME_SIZE + 1]++;
-                    } else if (fileName[BASE_NAME_SIZE] != '9') {
-                        fileName[BASE_NAME_SIZE + 1] = '0';
-                        fileName[BASE_NAME_SIZE + 2] = '0';
-                        fileName[BASE_NAME_SIZE + 3] = '0';
-                        fileName[BASE_NAME_SIZE]++;
-                    } else {
-                        Serial.println("Can't create file name");
-                    }
-                }
+            delay(1000);
+            byte attempts = 1;
+            while (attempts <= 10) {
+                if (!sd.begin(SdioConfig(FIFO_SDIO))) {
+                    Serial.print("SD Begin Failed, Attempting "); Serial.print(10 - attempts++); Serial.println(" more tries ...");
+                    delay(1000);
+                } else {
+                    Serial.println("\nFIFO SDIO mode.");
 
-                f = sd.open(fileName, FILE_WRITE);
-                Serial.print("Writing to: ");
-                Serial.println(fileName);
-                if (!f) {
-                    Serial.println("Failed opening file.");
+
+                    // Enumerates File Name
+                    while (sd.exists(fileName)) {
+                        if (fileName[BASE_NAME_SIZE + 3] != '9') {
+                            fileName[BASE_NAME_SIZE + 3]++;
+                        } else if (fileName[BASE_NAME_SIZE + 2] != '9') {
+                            fileName[BASE_NAME_SIZE + 3] = '0';
+                            fileName[BASE_NAME_SIZE + 2]++;
+                        } else if (fileName[BASE_NAME_SIZE + 1] != '9') {
+                            fileName[BASE_NAME_SIZE + 2] = '0';
+                            fileName[BASE_NAME_SIZE + 3] = '0';
+                            fileName[BASE_NAME_SIZE + 1]++;
+                        } else if (fileName[BASE_NAME_SIZE] != '9') {
+                            fileName[BASE_NAME_SIZE + 1] = '0';
+                            fileName[BASE_NAME_SIZE + 2] = '0';
+                            fileName[BASE_NAME_SIZE + 3] = '0';
+                            fileName[BASE_NAME_SIZE]++;
+                        } else {
+                            Serial.println("Can't create file name");
+                        }
+                    }
+
+                    f = sd.open(fileName, FILE_WRITE);
+                    Serial.print("Writing to: ");
+                    Serial.println(fileName);
+                    if (!f) {
+                        Serial.println("Failed opening file.");
+                    }
+                    sdexists = true;
+                    break;
                 }
-                sdexists = true;
             }
         }
 
