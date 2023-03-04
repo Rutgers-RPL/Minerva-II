@@ -49,31 +49,28 @@ class Ahrs{
 
             Vec3 wprime = gyr + (gyroffset * (-1));
             // Reset timer if gyroscope not stationary
-            if ((fabs(gyr.x) > wmin) || (fabs(gyr.y) > wmin) || (fabs(gyr.z) > wmin)) {
+            if (!((fabs(gyr.x) > wmin) || (fabs(gyr.y) > wmin) || (fabs(gyr.z) > wmin))) {
                 //Serial.println("ez gyro");
-                fb=0;
-            } else if (fb < tb) {
                 fb+=delta;
-            } else {
-                // Adjust offset if timer has elapsed
-                gyroffset = gyroffset + gyroBiasCompensation(gyr*delta);
+            } else if (fb < tb) {
+                fb=0;
             }
 
             Vec3 mprime(0,0,0);
             //Serial.println(mag.magnitude());
-            if (mag.magnitude() > 1.10 && mag.magnitude() < 2.10){
-                //Serial.println("ez mag");
+            if (mag.magnitude() > 0.22 && mag.magnitude() < 0.67){
                 mprime = mag;
             }
 
-            Vec3 aprime = acc;
-            if (acc.magnitude() - 1 < grange && acc.magnitude() -1 < -1.0 * grange){ //the acceleration has NOT exceeded the range for gravity
-                //Serial.println("ez acc");
+            Vec3 aprime(0, 0, 0);
+            if (!(acc.magnitude() - 1 < grange && acc.magnitude() -1 > -1.0 * grange)){ //the acceleration has exceeded the range for gravity
                 fa+=delta;
-                if(fa > ta)
-                    aprime = Vec3(0, 0, 0);
             } else {
                 fa = 0;
+            }
+
+            if(!(fa > ta)){
+                aprime = acc;
             }
 
             Vec3 gainAdjustedw = wprime + (errorTerm(aprime, mprime, q)*K);

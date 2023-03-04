@@ -19,6 +19,7 @@
 #include <kf.h>
 #include <BasicLinearAlgebra.h>
 #include <structs.h>
+#include <MadgwickAHRS.h>
 
 #define _g_ (9.80665)
 
@@ -29,6 +30,8 @@
 minerva_II_packet packet;
 
 FastCRC32 CRC32;
+
+Madgwick AHRS;
 
 short magic = 0xBEEF;
 
@@ -44,18 +47,20 @@ uint32_t tCount = 0;
 uint32_t gpsCount = 0;
 
 const int led = 0;
-long blinkCounter;
 bool ledOn;
 bool firstGPS = true;
 
 float initialAltitude = 0.0;
 float initialHMSL = 0.0;
-unsigned long file_flush_time = 0;
-unsigned long file_log_time = 0;
-unsigned long lastTime = 0;
-unsigned long printTime = 0;
-unsigned long kfTime = 0;
-unsigned long packetTime = 0;
+elapsedMicros file_flush_time;
+elapsedMicros file_log_time;
+elapsedMicros lastTime;
+elapsedMicros printTime;
+elapsedMicros kfTime;
+elapsedMicros packetTime;
+elapsedMicros mainTime;
+elapsedMicros blinkTime;
+
 Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
@@ -123,6 +128,7 @@ void setup() {
   initialAltitude = sen.readAltitude();
 
   Serial.print("Runnign Main Loop.");
+  AHRS.begin(600);
 }
 
 Quaternion orientation = Quaternion();
@@ -132,12 +138,12 @@ void loop() {
     first_loop = false;
     offset_time = micros();
   }
-  packet.time_us = micros() - offset_time;
+  packet.time_us = mainTime - offset_time;
 
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
 
-  if (millis() - blinkCounter >= 500) {
+  if (blinkTime >= 500) {
     if (ledOn) {
       ledOn = false;
       digitalWrite(led, LOW);
@@ -145,11 +151,11 @@ void loop() {
       ledOn = true;
       digitalWrite(led, HIGH);
     }
-    blinkCounter = millis();
+    blinkTime = 0;
   }
 
-  kf.predict((micros() - kfTime) / 1000000.0);
-  kfTime = micros();
+  kf.predict(kfTime / 1000000.0);
+  kfTime = 0;
   packet.kf_acceleration_mss = kf.X(0, 2);
   packet.kf_velocity_ms = kf.X(0, 1);
   packet.kf_position_m = kf.X(0, 0);
@@ -160,8 +166,8 @@ void loop() {
     packet.barometer_hMSL_m = sen.readAltitude();
 
     kf.H = {1.0, 0.0, 0.0};
-    kf.update((micros() - kfTime) / 1000000.0, sen.readAltitude() - initialAltitude);
-    kfTime = micros();
+    kf.update(kfTime / 1000000.0, sen.readAltitude() - initialAltitude);
+    kfTime = 0;
   }
 
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
@@ -175,8 +181,8 @@ void loop() {
     Vec3 magVec = sen.readMag();
     Vec3 accVec = sen.readAccel();
     Vec3 gyrVec = sen.readGyro();
-    thisahrs.update(accVec,gyrVec,magVec);
-    orientation = thisahrs.q;
+    //thisahrs.update(accVec,gyrVec,magVec);
+    //orientation = thisahrs.q;
     packet.temperature_c = sen.readTemperature();
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
@@ -187,18 +193,23 @@ void loop() {
     packet.gauss_x = magVec.x;
     packet.gauss_y = magVec.y;
     packet.gauss_z = magVec.z;
-    packet.w = orientation.a;
-    packet.x = orientation.b;
-    packet.y = orientation.c;
-    packet.z = orientation.d;
+    AHRS.update(gyrVec.x, gyrVec.y, gyrVec.z, accVec.x, accVec.y, accVec.z, magVec.x, magVec.y, magVec.z);
+    packet.w = AHRS.q0;
+    packet.x = AHRS.q1;
+    packet.y = AHRS.q2;
+    packet.z = AHRS.q3;
+    // packet.w = orientation.a;
+    // packet.x = orientation.b;
+    // packet.y = orientation.c;
+    // packet.z = orientation.d;
 
     kf.H = {0.0, 0.0, 1.0};
-    kf.update((micros() - kfTime) / 1000000.0, thisahrs.aglobal.d);
-    kfTime = micros();
+    kf.update(kfTime / 1000000.0, thisahrs.aglobal.d);
+    kfTime = 0;
   }
 
-  if (micros() - file_log_time >= (1000000 / sdLogHZ)) {
-    file_log_time = micros();
+  if (file_log_time >= (1000000 / sdLogHZ)) {
+    file_log_time = 0;
     if (sen.sdexists && sen.f) {
       sen.logPacket(packet);
     } else {
@@ -212,13 +223,13 @@ void loop() {
   packet.main_voltage_v = sen.readBatteryVoltage();
 
 
-  if (sen.sdexists && (micros() - file_flush_time >= (1000000 / sdSaveHZ))) {
-    file_flush_time = micros();
+  if (sen.sdexists && file_flush_time >= (1000000 / sdSaveHZ)) {
+    file_flush_time = 0;
     sen.f.flush();
   }
 
-  if (micros() - lastTime >= 50000) {
-    lastTime = micros();
+  if (lastTime >= 50000) {
+    lastTime = 0;
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println();
     //Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
@@ -250,12 +261,12 @@ void loop() {
     //Serial.println(sizeof(packet));
   }
 
- if (micros() - packetTime >= 100000) {
-  packet.time_us = micros();
+ if (packetTime >= 100000) {
+  packetTime = 0;
+  packet.time_us = mainTime - offset_time;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
   Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
   Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-  packetTime = micros();
  }
  tCount++;
 }

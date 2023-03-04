@@ -201,15 +201,15 @@ class Sensors{
             }
             normalized[0] = (double)raw[0] - 131072.0;
             normalized[0] /= 131072.0;
-            //normalized[0] *= 8.0;
+            normalized[0] *= 8.0;
 
             normalized[1] = (double)raw[1] - 131072.0;
             normalized[1] /= 131072.0;
-            //normalized[1]*= 8.0;
+            normalized[1]*= 8.0;
 
             normalized[2] = (double)raw[2] - 131072.0;
             normalized[2] /= 131072.0;
-            //normalized[2] *= 8.0;
+            normalized[2] *= 8.0;
 
             Quaternion q(normalized[0], normalized[1], -1.0 * normalized[2]);
             // q = magRot.rotate(q);
