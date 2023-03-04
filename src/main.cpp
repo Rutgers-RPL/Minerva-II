@@ -23,6 +23,15 @@
 
 #define _g_ (9.80665)
 
+#define PYRO0_FIRE 19
+#define PYRO0_CONN 20
+#define PYRO1_FIRE 17
+#define PYRO1_CONN 18
+#define PYRO2_FIRE 15
+#define PYRO2_CONN 16
+#define PYRO3_FIRE 41
+#define PYRO3_CONN 14
+
 #define radioHZ 10
 #define sdLogHZ 500
 #define sdSaveHZ 10
@@ -60,6 +69,8 @@ elapsedMicros kfTime;
 elapsedMicros packetTime;
 elapsedMicros mainTime;
 elapsedMicros blinkTime;
+
+
 
 Ahrs thisahrs;
 Sensors sen;
@@ -129,6 +140,21 @@ void setup() {
 
   Serial.print("Runnign Main Loop.");
   AHRS.begin(600);
+
+  pinMode(PYRO0_FIRE, OUTPUT);
+  pinMode(PYRO1_FIRE, OUTPUT);
+  pinMode(PYRO2_FIRE, OUTPUT);
+  pinMode(PYRO3_FIRE, OUTPUT);
+
+  pinMode(PYRO0_CONN, INPUT);
+  pinMode(PYRO1_CONN, INPUT);
+  pinMode(PYRO2_CONN, INPUT);
+  pinMode(PYRO3_CONN, INPUT);
+
+  digitalWrite(PYRO0_FIRE, LOW);
+  digitalWrite(PYRO1_FIRE, LOW);
+  digitalWrite(PYRO2_FIRE, LOW);
+  digitalWrite(PYRO3_FIRE, LOW);
 }
 
 Quaternion orientation = Quaternion();
@@ -261,7 +287,7 @@ void loop() {
     //Serial.println(sizeof(packet));
   }
 
- if (packetTime >= 100000) {
+ if (packetTime >= 1000000 / radioHZ) {
   packetTime = 0;
   packet.time_us = mainTime - offset_time;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
