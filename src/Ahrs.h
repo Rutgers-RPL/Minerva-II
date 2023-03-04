@@ -15,7 +15,7 @@ class Ahrs{
         double fb;//time spent stationary
 
         double ta = 0.1;
-        double grange = 0.1;
+        double grange = 0.05;
         double fa = 0;
 
         double Knorm = 0.5;
@@ -37,9 +37,9 @@ class Ahrs{
         void update(Vec3 acc, Vec3 gyr, Vec3 mag){
             
             // Scale acc to in terms of g
-            acc = acc * (1/_g_);
+            acc = acc * (1.0/_g_);
 
-            double time2 = micros();
+            long time2 = micros();
             double delta = ((double)(time2-lastTime))/1000000.0;
             lastTime = time2;
 
@@ -50,21 +50,25 @@ class Ahrs{
             Vec3 wprime = gyr + (gyroffset * (-1));
             // Reset timer if gyroscope not stationary
             if ((fabs(gyr.x) > wmin) || (fabs(gyr.y) > wmin) || (fabs(gyr.z) > wmin)) {
+                //Serial.println("ez gyro");
                 fb=0;
             } else if (fb < tb) {
-                fb+=1;
+                fb+=delta;
             } else {
                 // Adjust offset if timer has elapsed
                 gyroffset = gyroffset + gyroBiasCompensation(gyr*delta);
             }
 
             Vec3 mprime(0,0,0);
-            if (mag.magnitude() > 22 && mag.magnitude() < 67){
+            //Serial.println(mag.magnitude());
+            if (mag.magnitude() > 1.10 && mag.magnitude() < 2.10){
+                //Serial.println("ez mag");
                 mprime = mag;
             }
 
             Vec3 aprime = acc;
-            if(!(acc.magnitude() - 1 > -1 * grange && acc.magnitude() - 1 < grange)){ //the acceleration has NOT exceeded the range for gravity
+            if (acc.magnitude() - 1 < grange && acc.magnitude() -1 < -1.0 * grange){ //the acceleration has NOT exceeded the range for gravity
+                //Serial.println("ez acc");
                 fa+=delta;
                 if(fa > ta)
                     aprime = Vec3(0, 0, 0);

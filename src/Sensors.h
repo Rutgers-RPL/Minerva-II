@@ -27,6 +27,16 @@ const uint8_t acc_cs = 37;
 const uint8_t gyr_cs = 36;
 const uint8_t mag_cs = 38;
 
+const float hard_iron[3] = {
+  -8.93,
+  -31.33,
+  37.49,
+};
+const float soft_iron[3][3] = {
+  {0.908, -0.007, -0.021},
+  {-0.006, 0.992, 0.016},
+  {-0.020, 0.016, 1.109}
+};
 
 /* accel object */
 Bmi088Accel accel(SPI, acc_cs);
@@ -64,7 +74,7 @@ class Sensors{
 
             // magRot = Quaternion::from_euler_rotation(0, 0, 0);
             // magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
-            // allRot = Quaternion::from_euler_rotation(PI/2.0, 0, 0);
+            allRot = Quaternion::from_euler_rotation(0.0, PI/2.0, 0.0);
 
             int status;
             status = accel.begin();
@@ -158,7 +168,7 @@ class Sensors{
             Quaternion q(accel.getAccelX_mss(), accel.getAccelY_mss(), accel.getAccelZ_mss());
             
             //q = imuRot.rotate(q);
-            //q = allRot.rotate(q);
+            q = allRot.rotate(q);
 
             return Vec3(q.b, q.c, q.d);
         }
@@ -167,33 +177,42 @@ class Sensors{
             gyro.readSensor();
             Quaternion q(gyro.getGyroX_rads(), gyro.getGyroY_rads(), gyro.getGyroZ_rads());
             // q = imuRot.rotate(q);
-            // q = allRot.rotate(q);
+            q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
         }
 
         Vec3 readMag(){
-            uint32_t raw_x;
-            uint32_t raw_y;
-            uint32_t raw_z;
-            float normalized_x;
-            float normalized_y;
-            float normalized_z;
+            uint32_t raw[3];
+            uint32_t temp[3];
+            uint32_t cal[3];
+            float normalized[3];
             // use readMeasurement if not using interrupts
-            mag.readFieldsXYZ(&raw_x, &raw_y, &raw_z);
-            normalized_x = (double)raw_x - 131072.0;
-            normalized_x /= 131072.0;
-            normalized_x *= 8.0;
+            mag.readFieldsXYZ(&raw[0], &raw[1], &raw[2]);
 
-            normalized_y = (double)raw_y - 131072.0;
-            normalized_y /= 131072.0;
-            normalized_y *= 8.0;
+            for (int i = 0; i < 3; i++) {
+                temp[i] = raw[i] - hard_iron[i];
+            }
 
-            normalized_z = (double)raw_z - 131072.0;
-            normalized_z /= 131072.0;
-            normalized_z *= 8.0;
-            Quaternion q(normalized_x, normalized_y, normalized_z);
+            for (int i = 0; i < 3; i++) {
+                cal[i] = (soft_iron[i][0] * temp[0]) +
+                         (soft_iron[i][1] * temp[1]) +
+                         (soft_iron[i][2] * temp[2]);
+            }
+            normalized[0] = (double)cal[0] - 131072.0;
+            normalized[0] /= 131072.0;
+            normalized[0] *= 8.0;
+
+            normalized[1] = (double)cal[1] - 131072.0;
+            normalized[1] /= 131072.0;
+            normalized[1]*= 8.0;
+
+            normalized[2] = (double)cal[2] - 131072.0;
+            normalized[2] /= 131072.0;
+            normalized[2] *= 8.0;
+
+            Quaternion q(normalized[0], normalized[1], -1.0 * normalized[2]);
             // q = magRot.rotate(q);
-            // q = allRot.rotate(q);
+            q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
         }
 
@@ -222,10 +241,8 @@ class Sensors{
             float longitude = gps.getLongitude();
             return longitude;
         }
-        float readTemperature(){
-            bmp5_sensor_data data = {0, 0}; 
-            baro.getSensorData(&data);
-            return data.temperature;//(accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
+        float readTemperature(){;
+            return accel.getTemperature_C();//(accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
         }
 
         float readBatteryVoltage(){
@@ -285,7 +302,8 @@ class Sensors{
             f.print(packet.magic); f.print(","); 
             f.print(packet.code); f.print(","); 
             f.print(packet.time_us); f.print(",");
-            f.print(packet.voltage_v); f.print(",");
+            f.print(packet.main_voltage_v); f.print(",");
+            f.print(packet.pyro_voltage_v); f.print(",");
             f.print(packet.numSatellites); f.print(",");
             f.print(packet.gpsFixType); f.print(",");
             f.print(packet.latitude_degrees); f.print(",");
@@ -317,7 +335,8 @@ class Sensors{
             Serial.print(packet.magic); Serial.print("\t"); 
             Serial.print(packet.code); Serial.print("\t"); 
             Serial.print(packet.time_us); Serial.print("\t");
-            Serial.print(packet.voltage_v); Serial.print("\t");
+            Serial.print(packet.main_voltage_v); Serial.print("\t");
+            Serial.print(packet.pyro_voltage_v); Serial.print(",");
             Serial.print(packet.numSatellites); Serial.print("\t");
             Serial.print(packet.gpsFixType); Serial.print("\t");
             Serial.print(packet.latitude_degrees); Serial.print("\t");

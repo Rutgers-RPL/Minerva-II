@@ -6,8 +6,9 @@
 typedef struct {
   short magic;                   // 2 bytes -   2
   byte code;                     // 1 byte  -   3
-  unsigned long time_us;         // 8 bytes -  11
-  float voltage_v;               // 4 bytes -  15
+  unsigned int time_us;         // 4 bytes -  11
+  float main_voltage_v;          // 4 bytes -  15
+  float pyro_voltage_v;          // 4 bytes -  19
   byte numSatellites;            // 1 byte  -  16
   byte gpsFixType;               // 1 byte  -  17
   float latitude_degrees;        // 4 bytes -  21

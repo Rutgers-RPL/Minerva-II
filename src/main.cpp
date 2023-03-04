@@ -22,6 +22,10 @@
 
 #define _g_ (9.80665)
 
+#define radioHZ 10
+#define sdLogHZ 500
+#define sdSaveHZ 10
+
 minerva_II_packet packet;
 
 FastCRC32 CRC32;
@@ -51,6 +55,7 @@ unsigned long file_log_time = 0;
 unsigned long lastTime = 0;
 unsigned long printTime = 0;
 unsigned long kfTime = 0;
+unsigned long packetTime = 0;
 Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
@@ -64,17 +69,6 @@ void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   packet.latitude_degrees = ubxDataStruct->lat * 1e-7;
   packet.longitude_degrees = ubxDataStruct->lon * 1e-7;
   packet.gpsFixType = ubxDataStruct->fixType;
-  //Serial.println(ubxDataStruct->velD / 1000.0);
-  // if (firstGPS && packet.gpsFixType != 0) {
-  //   firstGPS = false;
-  //   initialHMSL = packet.hMSL;
-  // }
-  // if (!firstGPS) {
-  //   //Serial.println(packet.hMSL - initialHMSL);
-  //   kf.H = {1.0, 0.0, 0.0};
-  //   kf.update((micros() - kfTime) / 1000000.0, packet.hMSL - initialHMSL);
-  //   kfTime = micros();
-  // }
 }
 
 const uint8_t acc_int_pin = 9;
@@ -127,6 +121,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 
   initialAltitude = sen.readAltitude();
+
+  Serial.print("Runnign Main Loop.");
 }
 
 Quaternion orientation = Quaternion();
@@ -136,7 +132,7 @@ void loop() {
     first_loop = false;
     offset_time = micros();
   }
-  packet.time_us = (unsigned long) micros() - offset_time;
+  packet.time_us = micros() - offset_time;
 
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
@@ -158,6 +154,16 @@ void loop() {
   packet.kf_velocity_ms = kf.X(0, 1);
   packet.kf_position_m = kf.X(0, 0);
 
+  if (baro_interrupt) {
+    baro_interrupt = false;
+    bCount++;
+    packet.barometer_hMSL_m = sen.readAltitude();
+
+    kf.H = {1.0, 0.0, 0.0};
+    kf.update((micros() - kfTime) / 1000000.0, sen.readAltitude() - initialAltitude);
+    kfTime = micros();
+  }
+
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
     mag.clearMeasDoneInterrupt();
     acc_interrupt = false;
@@ -171,6 +177,7 @@ void loop() {
     Vec3 gyrVec = sen.readGyro();
     thisahrs.update(accVec,gyrVec,magVec);
     orientation = thisahrs.q;
+    packet.temperature_c = sen.readTemperature();
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
     packet.acceleration_z_mss = accVec.z;
@@ -188,66 +195,58 @@ void loop() {
     kf.H = {0.0, 0.0, 1.0};
     kf.update((micros() - kfTime) / 1000000.0, thisahrs.aglobal.d);
     kfTime = micros();
-
   }
 
-  if (micros() - file_log_time >= 1000) {
+  if (micros() - file_log_time >= (1000000 / sdLogHZ)) {
     file_log_time = micros();
     if (sen.sdexists && sen.f) {
       sen.logPacket(packet);
     } else {
-      Serial.println("No sd writing");
+      //Serial.println("No sd writing");
       // data.code = -1;
       // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
-  }
-  }
-
-
-  packet.voltage_v = sen.readBatteryVoltage();
-
-  if (baro_interrupt) {
-    baro_interrupt = false;
-    bCount++;
-    packet.barometer_hMSL_m = sen.readAltitude();
-
-    kf.H = {1.0, 0.0, 0.0};
-    kf.update((micros() - kfTime) / 1000000.0, sen.readAltitude() - initialAltitude);
-    kfTime = micros();
+    }
+    
   }
 
+  packet.main_voltage_v = sen.readBatteryVoltage();
 
-  if (sen.sdexists && (micros() - file_flush_time >= 100000)) {
+
+  if (sen.sdexists && (micros() - file_flush_time >= (1000000 / sdSaveHZ))) {
     file_flush_time = micros();
     sen.f.flush();
   }
-    //count++;
+
   if (micros() - lastTime >= 1000000) {
     lastTime = micros();
-    packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-    Serial.println();
-    Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
-    Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
-    Serial.print("Int:\t\t"); Serial.print(acc_interrupt); Serial.print("\t"); Serial.print(gyro_interrupt); Serial.print("\t"); Serial.print(baro_interrupt); Serial.print("\t"); Serial.println(mag_interrupt);
-    Serial.println("\tVolt:\thMSL:\tLat:\tLon:\tFix:\tSat:\tBaro:");
-    //Serial.print("Packet:\t");  Serial.print(packet.voltage_v); Serial.print("\t"); Serial.print(packet.gps_hMSL_m); Serial.print("\t"); Serial.print(packet.latitude_degrees); Serial.print("\t"); Serial.print(packet.longitude_degrees); Serial.print("\t"); Serial.print(packet.gpsFixType); Serial.print("\t"); Serial.print(packet.numSatellites); Serial.print("\t"); Serial.println(packet.barometer_hMSL_m);
-    //sen.printPacket(packet);
-    Serial.println("\tAcc:\tVel:\tPos:");
-    Serial.print("KF:\t"); Serial.print(kf.X(0,2)); Serial.print("\t"); Serial.print(kf.X(0,1)); Serial.print("\t"); Serial.println(kf.X(0,0));
+    //Serial.println();
+    //Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
+    //Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
+    // Serial.print("Int:\t\t"); Serial.print(acc_interrupt); Serial.print("\t"); Serial.print(gyro_interrupt); Serial.print("\t"); Serial.print(baro_interrupt); Serial.print("\t"); Serial.println(mag_interrupt);
+    // Serial.println("\tVolt:\thMSL:\tLat:\tLon:\tFix:\tSat:\tBaro:");
+    // Serial.print("Packet:\t");  Serial.print(packet.voltage_v); Serial.print("\t"); Serial.print(packet.gps_hMSL_m); Serial.print("\t"); Serial.print(packet.latitude_degrees); Serial.print("\t"); Serial.print(packet.longitude_degrees); Serial.print("\t"); Serial.print(packet.gpsFixType); Serial.print("\t"); Serial.print(packet.numSatellites); Serial.print("\t"); Serial.println(packet.barometer_hMSL_m);
+    // //sen.printPacket(packet);
+    // Serial.println("\tAcc:\tVel:\tPos:");
+    // Serial.print("KF:\t"); Serial.print(kf.X(0,2)); Serial.print("\t"); Serial.print(kf.X(0,1)); Serial.print("\t"); Serial.println(kf.X(0,0));
     tCount = 0;
     aCount = 0;
     gCount = 0;
     bCount = 0;
     mCount = 0;
     gpsCount = 0;
+    Serial.println(packet.temperature_c);
+    //Serial2.print("Kalman Filter Altitude: "); Serial2.println(packet.kf_position_m);
+    //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+    //Serial.println(sizeof(packet));
   }
 
-  
-  /*
-  if (count % 15 == 0) {
-    //Serial.write((const uint8_t *)&data, sizeof(data));
-    Serial2.write((const uint8_t *)&data, sizeof(data));
-  }
-  */
+ if (micros() - packetTime >= 100000) {
+  packet.time_us = micros();
+  packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
+  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  packetTime = micros();
+ }
  tCount++;
 }
