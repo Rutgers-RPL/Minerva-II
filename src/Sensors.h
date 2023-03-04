@@ -140,6 +140,7 @@ class Sensors{
             }
             mag.softReset();
             mag.performResetOperation();
+            mag.enableAutomaticSetReset();
             mag.setFilterBandwidth(800);
             mag.setContinuousModeFrequency(1000);
             mag.enableContinuousMode();
@@ -198,17 +199,17 @@ class Sensors{
                          (soft_iron[i][1] * temp[1]) +
                          (soft_iron[i][2] * temp[2]);
             }
-            normalized[0] = (double)cal[0] - 131072.0;
+            normalized[0] = (double)raw[0] - 131072.0;
             normalized[0] /= 131072.0;
-            normalized[0] *= 8.0;
+            //normalized[0] *= 8.0;
 
-            normalized[1] = (double)cal[1] - 131072.0;
+            normalized[1] = (double)raw[1] - 131072.0;
             normalized[1] /= 131072.0;
-            normalized[1]*= 8.0;
+            //normalized[1]*= 8.0;
 
-            normalized[2] = (double)cal[2] - 131072.0;
+            normalized[2] = (double)raw[2] - 131072.0;
             normalized[2] /= 131072.0;
-            normalized[2] *= 8.0;
+            //normalized[2] *= 8.0;
 
             Quaternion q(normalized[0], normalized[1], -1.0 * normalized[2]);
             // q = magRot.rotate(q);

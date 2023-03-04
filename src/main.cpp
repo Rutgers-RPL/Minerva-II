@@ -217,7 +217,7 @@ void loop() {
     sen.f.flush();
   }
 
-  if (micros() - lastTime >= 1000000) {
+  if (micros() - lastTime >= 50000) {
     lastTime = micros();
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println();
@@ -229,13 +229,22 @@ void loop() {
     // //sen.printPacket(packet);
     // Serial.println("\tAcc:\tVel:\tPos:");
     // Serial.print("KF:\t"); Serial.print(kf.X(0,2)); Serial.print("\t"); Serial.print(kf.X(0,1)); Serial.print("\t"); Serial.println(kf.X(0,0));
+    // float heading = atan2(packet.gauss_x, 0 - packet.gauss_y);
+
+    // heading /= PI;
+    // heading *= 180;
+    // heading += 180;
+
+    // Serial.print("Heading: ");
+    // Serial.println(heading, 1);
+
     tCount = 0;
     aCount = 0;
     gCount = 0;
     bCount = 0;
     mCount = 0;
     gpsCount = 0;
-    Serial.println(packet.temperature_c);
+    //Serial.println(packet.temperature_c);
     //Serial2.print("Kalman Filter Altitude: "); Serial2.println(packet.kf_position_m);
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println(sizeof(packet));
