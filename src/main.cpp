@@ -14,7 +14,7 @@
 #include <FastCRC.h>
 #include <Quaternion.h>
 #include <Vec3.h>
-#include <Ahrs.h>
+//#include <Ahrs.h>
 #include <Sensors.h>
 #include <kf.h>
 #include <BasicLinearAlgebra.h>
@@ -32,7 +32,7 @@
 #define PYRO3_FIRE 41
 #define PYRO3_CONN 14
 
-#define radioHZ 10
+#define radioHZ 20
 #define sdLogHZ 500
 #define sdSaveHZ 10
 
@@ -63,7 +63,6 @@ float initialAltitude = 0.0;
 float initialHMSL = 0.0;
 elapsedMicros file_flush_time;
 elapsedMicros file_log_time;
-elapsedMicros lastTime;
 elapsedMicros printTime;
 elapsedMicros kfTime;
 elapsedMicros packetTime;
@@ -72,14 +71,12 @@ elapsedMicros blinkTime;
 
 
 
-Ahrs thisahrs;
+//Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
-uint32_t gpsTime = 0;
 
 void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   gpsCount++;
-  gpsTime = ubxDataStruct->iTOW;
   packet.gps_hMSL_m = ubxDataStruct->hMSL / 1000.0;
   packet.numSatellites = ubxDataStruct->numSV;
   packet.latitude_degrees = ubxDataStruct->lat * 1e-7;
@@ -119,14 +116,20 @@ void setup() {
   Serial.flush();
   Serial2.flush();
 
-  sen.beginSD();
+  sen.init(packet);
+  sen.beginSD(packet);
 
   byte attempts = 1;
   while (!gps.setAutoPVTcallbackPtr(&printPVTData) && attempts <= 10) {
+    Serial.println(packet.status);
+    packet.status |= 1<<6;
     delay(1000);
     Serial.print("GPS Callback attachement failed, Retrying "); Serial.print(10 - attempts++); Serial.println(" more times ...");
   }
-  
+  if (attempts < 11) {
+    packet.status &= ~(1<<6);
+  }
+  Serial.println(packet.status);
   pinMode(baro_int_pin, INPUT);
   pinMode(mag_int_pin, INPUT);
   pinMode(acc_int_pin, INPUT);
@@ -169,7 +172,8 @@ void loop() {
   gps.checkUblox(); // Check for the arrival of new data and process it.
   gps.checkCallbacks(); // Check if any callbacks are waiting to be processed.
 
-  if (blinkTime >= 500) {
+  if (blinkTime >= 50000) {
+    blinkTime = 0;
     if (ledOn) {
       ledOn = false;
       digitalWrite(led, LOW);
@@ -177,7 +181,6 @@ void loop() {
       ledOn = true;
       digitalWrite(led, HIGH);
     }
-    blinkTime = 0;
   }
 
   kf.predict(kfTime / 1000000.0);
@@ -228,20 +231,33 @@ void loop() {
     // packet.x = orientation.b;
     // packet.y = orientation.c;
     // packet.z = orientation.d;
+    Quaternion q;
+    q.a = packet.w;
+    q.b = packet.x;
+    q.c = packet.y;
+    q.d = packet.z;
 
+    Quaternion worldFrame = q.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
+    Vec3 accWorldVec(worldFrame.b, worldFrame.c, worldFrame.d);
+    Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
+    accWorldVec = accWorldVec + gravityVec;
+
+    //Serial.print(accWorldVec.x); Serial.print("\t"); Serial.print(accWorldVec.y); Serial.print("\t"); Serial.print(accWorldVec.z);
+    //Serial.println();
+    
     kf.H = {0.0, 0.0, 1.0};
-    kf.update(kfTime / 1000000.0, thisahrs.aglobal.d);
+    kf.update(kfTime / 1000000.0, accWorldVec.z);
     kfTime = 0;
   }
 
   if (file_log_time >= (1000000 / sdLogHZ)) {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
+      packet.status &= ~(1<<7);
       sen.logPacket(packet);
     } else {
-      //Serial.println("No sd writing");
-      // data.code = -1;
-      // data.checksum = CRC32.crc32((const uint8_t *)&data+sizeof(short), sizeof(realPacket) - 6);
+      // sets 1st bit of code to true
+      packet.status |= (1<<7);
     }
     
   }
@@ -254,8 +270,8 @@ void loop() {
     sen.f.flush();
   }
 
-  if (lastTime >= 50000) {
-    lastTime = 0;
+  if (printTime >= 50000) {
+    printTime = 0;
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println();
     //Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
@@ -289,7 +305,6 @@ void loop() {
 
  if (packetTime >= 1000000 / radioHZ) {
   packetTime = 0;
-  packet.time_us = mainTime - offset_time;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
   Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
   Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));

@@ -67,6 +67,9 @@ class Sensors{
         char* fileName = FILE_BASE_NAME "0000.csv";
 
         Sensors(){
+        }
+
+        void init(minerva_II_packet packet) {
             // Turns off digital input logic circuitry so it doesn't interfere with the analog signal
             pinMode(batteryPin, INPUT_DISABLE);
             pinMode(pyroBatteryPin, INPUT_DISABLE);
@@ -146,14 +149,17 @@ class Sensors{
             mag.enableContinuousMode();
             mag.enableInterrupt();
             
-
-            status = gps.begin(Wire2, gps_i2c_address);
-            while (!status) {
-                Serial.println("GPS Initialization Error");
-                Serial.println(status);
+            byte attempts = 1;
+            while (!gps.begin(Wire2, gps_i2c_address) && attempts <= 10) {
+                packet.status |= 1<<6;
+                Serial.print("GPS Initialization Error, Retrying "); Serial.print(10-attempts); Serial.println(" more times.");
+                attempts++;
                 delay(1000);
-                status = gps.begin(Wire2, gps_i2c_address);
             }
+            if (attempts < 11) {
+                packet.status &= ~(1<<6);
+            }
+
             gps.setI2COutput(COM_TYPE_UBX);
             gps.setDynamicModel(DYN_MODEL_AIRBORNE4g);
             gps.setNavigationFrequency(18);
@@ -255,16 +261,17 @@ class Sensors{
         }
 
 
-        void beginSD() {
+        void beginSD(minerva_II_packet packet) {
             delay(1000);
             byte attempts = 1;
             while (attempts <= 10) {
                 if (!sd.begin(SdioConfig(FIFO_SDIO))) {
+                    packet.status |= 1<<7;
                     Serial.print("SD Begin Failed, Attempting "); Serial.print(10 - attempts++); Serial.println(" more tries ...");
                     delay(1000);
                 } else {
+                    packet.status &= ~(1<<7);
                     Serial.println("\nFIFO SDIO mode.");
-
 
                     // Enumerates File Name
                     while (sd.exists(fileName)) {
@@ -291,7 +298,9 @@ class Sensors{
                     Serial.print("Writing to: ");
                     Serial.println(fileName);
                     if (!f) {
+                        packet.status |= 1<<7;
                         Serial.println("Failed opening file.");
+                        break;
                     }
                     sdexists = true;
                     break;
@@ -301,7 +310,7 @@ class Sensors{
 
         void logPacket(const minerva_II_packet packet) {
             f.print(packet.magic); f.print(","); 
-            f.print(packet.code); f.print(","); 
+            f.print(packet.status); f.print(","); 
             f.print(packet.time_us); f.print(",");
             f.print(packet.main_voltage_v); f.print(",");
             f.print(packet.pyro_voltage_v); f.print(",");
@@ -334,7 +343,7 @@ class Sensors{
 
         void printPacket(const minerva_II_packet packet) {
             Serial.print(packet.magic); Serial.print("\t"); 
-            Serial.print(packet.code); Serial.print("\t"); 
+            Serial.print(packet.status); Serial.print("\t"); 
             Serial.print(packet.time_us); Serial.print("\t");
             Serial.print(packet.main_voltage_v); Serial.print("\t");
             Serial.print(packet.pyro_voltage_v); Serial.print(",");
