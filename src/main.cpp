@@ -32,7 +32,7 @@
 #define PYRO3_FIRE 41
 #define PYRO3_CONN 14
 
-#define radioHZ 20
+#define radioHZ 10
 #define sdLogHZ 500
 #define sdSaveHZ 10
 
@@ -254,7 +254,8 @@ void loop() {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
-      sen.logPacket(packet);
+      //sen.logPacket(packet);
+      sen.logBinaryPacket(packet);
     } else {
       // sets 1st bit of code to true
       packet.status |= (1<<7);

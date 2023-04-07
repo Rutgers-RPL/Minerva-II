@@ -2,7 +2,7 @@
 #define Vec3_H
 #include <Arduino.h>
 
-class Vec3{
+class Vec3 {
     public:
         double x;
         double y;
@@ -58,4 +58,5 @@ class Vec3{
 double angleBetweenVec3(Vec3 a,Vec3 b){
     return (180/PI)*acos(a.dot(b)/(a.magnitude()*b.magnitude()));// read somewhere that this isnt the fastest arccos function available
 }
+
 #endif

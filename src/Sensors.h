@@ -64,7 +64,7 @@ class Sensors{
         FsFile f;
         bool sdexists = false;
 
-        char* fileName = FILE_BASE_NAME "0000.csv";
+        char* fileName = FILE_BASE_NAME "0000.bin";
 
         Sensors(){
         }
@@ -308,6 +308,10 @@ class Sensors{
             }
         }
 
+        void logBinaryPacket(const minerva_II_packet packet) {
+            f.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+        }
+
         void logPacket(const minerva_II_packet packet) {
             f.print(packet.magic); f.print(","); 
             f.print(packet.status); f.print(","); 
@@ -316,27 +320,27 @@ class Sensors{
             f.print(packet.pyro_voltage_v); f.print(",");
             f.print(packet.numSatellites); f.print(",");
             f.print(packet.gpsFixType); f.print(",");
-            f.print(packet.latitude_degrees); f.print(",");
-            f.print(packet.longitude_degrees); f.print(",");
+            f.print(packet.latitude_degrees, 5); f.print(",");
+            f.print(packet.longitude_degrees, 5); f.print(",");
             f.print(packet.gps_hMSL_m); f.print(",");
             f.print(packet.barometer_hMSL_m); f.print(",");
             f.print(packet.temperature_c); f.print(",");
-            f.print(packet.acceleration_x_mss); f.print(",");
-            f.print(packet.acceleration_y_mss); f.print(",");
-            f.print(packet.acceleration_z_mss); f.print(",");
-            f.print(packet.angular_velocity_x_rads); f.print(",");
-            f.print(packet.angular_velocity_y_rads); f.print(",");
-            f.print(packet.angular_velocity_z_rads); f.print(",");
-            f.print(packet.gauss_x); f.print(",");
-            f.print(packet.gauss_y); f.print(",");
-            f.print(packet.gauss_z); f.print(",");
-            f.print(packet.kf_acceleration_mss); f.print(",");
-            f.print(packet.kf_velocity_ms); f.print(",");
-            f.print(packet.kf_position_m); f.print(",");
-            f.print(packet.w); f.print(",");
-            f.print(packet.x); f.print(",");
-            f.print(packet.y); f.print(",");
-            f.print(packet.z); f.print(",");
+            f.print(packet.acceleration_x_mss, 3); f.print(",");
+            f.print(packet.acceleration_y_mss, 3); f.print(",");
+            f.print(packet.acceleration_z_mss, 3); f.print(",");
+            f.print(packet.angular_velocity_x_rads, 3); f.print(",");
+            f.print(packet.angular_velocity_y_rads, 3); f.print(",");
+            f.print(packet.angular_velocity_z_rads, 3); f.print(",");
+            f.print(packet.gauss_x, 3); f.print(",");
+            f.print(packet.gauss_y, 3); f.print(",");
+            f.print(packet.gauss_z, 3); f.print(",");
+            f.print(packet.kf_acceleration_mss, 3); f.print(",");
+            f.print(packet.kf_velocity_ms, 3); f.print(",");
+            f.print(packet.kf_position_m, 3); f.print(",");
+            f.print(packet.w, 3); f.print(",");
+            f.print(packet.x, 3); f.print(",");
+            f.print(packet.y, 3); f.print(",");
+            f.print(packet.z, 3); f.print(",");
             f.print(packet.checksum); f.print(",");
             f.println();
         }
