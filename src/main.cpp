@@ -41,6 +41,7 @@ minerva_II_packet packet;
 FastCRC32 CRC32;
 
 Madgwick AHRS;
+//Ahrs thisahrs;
 
 short magic = 0xBEEF;
 
@@ -69,9 +70,6 @@ elapsedMicros packetTime;
 elapsedMicros mainTime;
 elapsedMicros blinkTime;
 
-
-
-//Ahrs thisahrs;
 Sensors sen;
 KalmanFilter kf;
 
@@ -141,7 +139,7 @@ void setup() {
 
   initialAltitude = sen.readAltitude();
 
-  Serial.print("Runnign Main Loop.");
+  Serial.print("Running Main Loop.");
   AHRS.begin(600);
 
   pinMode(PYRO0_FIRE, OUTPUT);
@@ -210,8 +208,8 @@ void loop() {
     Vec3 magVec = sen.readMag();
     Vec3 accVec = sen.readAccel();
     Vec3 gyrVec = sen.readGyro();
-    //thisahrs.update(accVec,gyrVec,magVec);
-    //orientation = thisahrs.q;
+    // thisahrs.update(accVec,gyrVec,magVec);
+    // orientation = thisahrs.q;
     packet.temperature_c = sen.readTemperature();
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
@@ -254,8 +252,8 @@ void loop() {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
-      //sen.logPacket(packet);
-      sen.logBinaryPacket(packet);
+      sen.logPacket(packet);
+      //sen.logBinaryPacket(packet);
     } else {
       // sets 1st bit of code to true
       packet.status |= (1<<7);
