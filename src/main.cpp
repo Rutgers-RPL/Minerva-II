@@ -248,7 +248,7 @@ void loop() {
     kfTime = 0;
   }
 
-  if (file_log_time >= (1000000 / sdLogHZ)) {
+  if (file_log_time >= (1000000.0 / sdLogHZ)) {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
@@ -264,7 +264,7 @@ void loop() {
   packet.main_voltage_v = sen.readBatteryVoltage();
 
 
-  if (sen.sdexists && file_flush_time >= (1000000 / sdSaveHZ)) {
+  if (sen.sdexists && file_flush_time >= (1000000.0 / sdSaveHZ)) {
     file_flush_time = 0;
     sen.f.flush();
   }
@@ -302,7 +302,7 @@ void loop() {
     //Serial.println(sizeof(packet));
   }
 
- if (packetTime >= 1000000 / radioHZ) {
+ if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
   Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
