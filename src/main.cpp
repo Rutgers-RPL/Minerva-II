@@ -20,6 +20,7 @@
 #include <BasicLinearAlgebra.h>
 #include <structs.h>
 #include <MadgwickAHRS.h>
+#include <pyro.h>
 
 #define _g_ (9.80665)
 
