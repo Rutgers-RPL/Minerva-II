@@ -14,13 +14,13 @@
 #include <FastCRC.h>
 #include <Quaternion.h>
 #include <Vec3.h>
-//#include <Ahrs.h>
 #include <Sensors.h>
 #include <kf.h>
 #include <BasicLinearAlgebra.h>
 #include <structs.h>
 #include <MadgwickAHRS.h>
 #include <pyro.h>
+#include "ECEFUtils.h"
 
 #define _g_ (9.80665)
 
@@ -141,7 +141,7 @@ void setup() {
   initialAltitude = sen.readAltitude();
 
   Serial.print("Running Main Loop.");
-  AHRS.begin(600);
+  AHRS.begin(800);
 
   pinMode(PYRO0_FIRE, OUTPUT);
   pinMode(PYRO1_FIRE, OUTPUT);
@@ -235,11 +235,16 @@ void loop() {
     q.b = packet.x;
     q.c = packet.y;
     q.d = packet.z;
+    q = ECEFUtils::ned2ecef(q, packet.latitude_degrees*PI/180, packet.longitude_degrees*PI/180);
+    packet.w = q.a;
+    packet.y = q.b;
+    packet.y = q.c;
+    packet.z = q.d;
 
     Quaternion worldFrame = q.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
     Vec3 accWorldVec(worldFrame.b, worldFrame.c, worldFrame.d);
-    Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
-    accWorldVec = accWorldVec + gravityVec;
+    //Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
+    //accWorldVec = accWorldVec + gravityVec;
 
     //Serial.print(accWorldVec.x); Serial.print("\t"); Serial.print(accWorldVec.y); Serial.print("\t"); Serial.print(accWorldVec.z);
     //Serial.println();
