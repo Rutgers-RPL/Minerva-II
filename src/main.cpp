@@ -50,6 +50,9 @@ bool first_loop = true;
 unsigned long offset_time = 0;
 unsigned long previous_time = 0;
 
+float test_long = 0;
+float test_lat = 0;
+
 uint32_t bCount = 0;
 uint32_t aCount = 0;
 uint32_t gCount = 0;
@@ -235,7 +238,7 @@ void loop() {
     q.b = packet.x;
     q.c = packet.y;
     q.d = packet.z;
-    q = ECEFUtils::ned2ecef(q, packet.latitude_degrees*PI/180, packet.longitude_degrees*PI/180);
+    q = ECEFUtils::ned2ecef(q, packet.longitude_degrees*PI/180, packet.latitude_degrees*PI/180);
     packet.w = q.a;
     packet.y = q.b;
     packet.y = q.c;
@@ -245,9 +248,31 @@ void loop() {
     Vec3 accWorldVec(worldFrame.b, worldFrame.c, worldFrame.d);
     //Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
     //accWorldVec = accWorldVec + gravityVec;
+    // test_lat= test_lat+0.01;
+    // if(test_lat>PI) test_lat = -PI;
+    // Quaternion q1 = ECEFUtils::ned2ecef(q, 0, test_lat);
+    
+    // test_long= test_long+0.01;
+    // if(test_long>PI) test_long = -PI;
+    // Quaternion q2 = ECEFUtils::ned2ecef(q, test_long, 0);
 
-    //Serial.print(accWorldVec.x); Serial.print("\t"); Serial.print(accWorldVec.y); Serial.print("\t"); Serial.print(accWorldVec.z);
-    //Serial.println();
+    // Quaternion worldFrame1 = q1.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
+    // Vec3 accTestVec1(worldFrame1.b, worldFrame1.c, worldFrame1.d);
+    // Quaternion worldFrame2 = q2.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
+    // Vec3 accTestVec2(worldFrame2.b, worldFrame2.c, worldFrame2.d);
+
+    //Serial.print(accWorldVec.x); Serial.print("\t"); Serial.print(accWorldVec.y); Serial.print("\t"); Serial.print(accWorldVec.z); Serial.print("\t");
+    //Serial.print(sqrt(accWorldVec.x*accWorldVec.x+accWorldVec.y*accWorldVec.y+accWorldVec.z*accWorldVec.z)); Serial.print(" | ");
+
+    // Serial.print(accTestVec1.x); Serial.print("\t"); Serial.print(accTestVec1.y); Serial.print("\t"); Serial.print(accTestVec1.z); Serial.print("\t");
+    // Serial.print(sqrt(accTestVec1.x*accTestVec1.x+accTestVec1.y*accTestVec1.y+accTestVec1.z*accTestVec1.z)); Serial.print(" | ");
+
+    // Serial.print(accTestVec2.x); Serial.print("\t"); Serial.print(accTestVec2.y); Serial.print("\t"); Serial.print(accTestVec2.z); Serial.print("\t");
+    // Serial.print(sqrt(accTestVec2.x*accTestVec2.x+accTestVec2.y*accTestVec2.y+accTestVec2.z*accTestVec2.z)); Serial.print(" | ");
+
+    // Serial.printf("(%f, %f)", test_lat, test_long);
+
+    Serial.println();
     
     kf.H = {0.0, 0.0, 1.0};
     kf.update(kfTime / 1000000.0, accWorldVec.z);
@@ -277,7 +302,7 @@ void loop() {
 
   if (printTime >= 50000) {
     printTime = 0;
-    //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+    Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println();
     //Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
     //Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
@@ -311,7 +336,7 @@ void loop() {
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  // Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
   Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
  }
  tCount++;

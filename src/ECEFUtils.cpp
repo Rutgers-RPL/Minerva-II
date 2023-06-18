@@ -56,11 +56,16 @@ const Quaternion ECEFUtils::dcm2quat(Vec3 north, Vec3 east, Vec3 down){
   return output;
 }
 
-const Quaternion ECEFUtils::ned2ecef(Quaternion q, double lambda, double phi)
+const Quaternion ECEFUtils::ned2ecef(Quaternion q, double lambda, double phi) //lambda = longitude; phi = latitude
 {
-  Mat3x3 dcm =  Mat3x3( Vec3(-sin(lambda),            cos(lambda),            0),
-                        Vec3(-cos(lambda)*sin(phi),   -sin(lambda)*sin(phi),  cos(phi)),
-                        Vec3(cos(lambda)*cos(lambda), sin(lambda)*cos(phi),  sin(phi)));
+  // Mat3x3 dcm =  Mat3x3( Vec3(-sin(lambda),  -cos(lambda)*sin(phi),  cos(lambda)*cos(phi)),
+  //                       Vec3(cos(lambda),   -sin(lambda)*sin(phi),  sin(lambda)*cos(phi)),
+  //                       Vec3(0,              cos(phi),              sin(phi)));
+
+  Mat3x3 dcm = Mat3x3(Vec3(-sin(lambda), cos(lambda), 0),
+                      Vec3(-cos(lambda)*sin(phi), -sin(lambda)*sin(phi), cos(phi)),
+                      Vec3(cos(lambda)*cos(phi), sin(lambda)*cos(phi), sin(phi)));
+
   Quaternion rotation = dcm2quat(dcm.c1,dcm.c2,dcm.c3);
-  return q * rotation;
+  return rotation * q;
 }
