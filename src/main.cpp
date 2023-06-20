@@ -301,7 +301,7 @@ void loop() {
 
   if (printTime >= 50000) {
     printTime = 0;
-    Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+    //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
     //Serial.println();
     //Serial.println("\tLoop:\tAcc:\tGyro:\tBaro:\tMag:\tGPS:");
     //Serial.print("HZ:\t"); Serial.print(tCount); Serial.print("\t"); Serial.print(aCount); Serial.print("\t"); Serial.print(gCount); Serial.print("\t"); Serial.print(bCount); Serial.print("\t"); Serial.print(mCount); Serial.print("\t"); Serial.println(gpsCount);
@@ -398,6 +398,7 @@ void loop() {
         radioHZ = 1;
       }
     }
+  }
 
   p0.update(&packet, pyroMillis);
   p1.update(&packet, pyroMillis);
@@ -406,7 +407,7 @@ void loop() {
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  // Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
   Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
  }
  tCount++;
