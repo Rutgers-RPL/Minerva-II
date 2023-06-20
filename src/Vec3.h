@@ -26,12 +26,18 @@ class Vec3 {
         double magnitude(){
             return sqrt(pow(x,2)+pow(y,2)+pow(z,2));
         }
+
+        double angleBetweenVec3(Vec3 a,Vec3 b){
+            return (180/PI)*acos(a.dot(b)/(a.magnitude()*b.magnitude()));// read somewhere that this isnt the fastest arccos function available
+        }
+
         void normalize(){
             double m = magnitude();
             x/=m;
             y/=m;
             z/=m;
         }
+        
         Vec3 cross(Vec3 vec){
             return Vec3(y*vec.z-z*vec.y,z*vec.x-x*vec.z,x*vec.y-y*vec.x);
         }
@@ -53,10 +59,8 @@ class Vec3 {
         Vec3 operator *= (const double& s){ 
             return Vec3(x + x * s,y + y * s,z + z * s); 
         }
+
 };
 
-double angleBetweenVec3(Vec3 a,Vec3 b){
-    return (180/PI)*acos(a.dot(b)/(a.magnitude()*b.magnitude()));// read somewhere that this isnt the fastest arccos function available
-}
 
 #endif
