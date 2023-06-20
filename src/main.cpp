@@ -33,7 +33,7 @@
 #define PYRO3_FIRE 41
 #define PYRO3_CONN 14
 
-#define radioHZ 10
+uint8_t radioHZ = 10;
 #define sdLogHZ 500
 #define sdSaveHZ 10
 
@@ -43,6 +43,13 @@ FastCRC32 CRC32;
 
 Madgwick AHRS;
 //Ahrs thisahrs;
+
+union ArrayToInteger {
+  char array[4];
+  uint32_t integer;
+};
+
+ArrayToInteger converter;
 
 short magic = 0xBEEF;
 
@@ -70,6 +77,12 @@ elapsedMicros kfTime;
 elapsedMicros packetTime;
 elapsedMicros mainTime;
 elapsedMicros blinkTime;
+elapsedMillis pyroMillis;
+
+Pyro p0 = Pyro(PYRO0_FIRE, PYRO0_CONN, 32, 31);
+Pyro p1 = Pyro(PYRO1_FIRE, PYRO1_CONN, 30, 29);
+Pyro p2 = Pyro(PYRO2_FIRE, PYRO2_CONN, 28, 27);
+Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 
 Sensors sen;
 KalmanFilter kf;
@@ -142,21 +155,6 @@ void setup() {
 
   Serial.print("Running Main Loop.");
   AHRS.begin(600);
-
-  pinMode(PYRO0_FIRE, OUTPUT);
-  pinMode(PYRO1_FIRE, OUTPUT);
-  pinMode(PYRO2_FIRE, OUTPUT);
-  pinMode(PYRO3_FIRE, OUTPUT);
-
-  pinMode(PYRO0_CONN, INPUT);
-  pinMode(PYRO1_CONN, INPUT);
-  pinMode(PYRO2_CONN, INPUT);
-  pinMode(PYRO3_CONN, INPUT);
-
-  digitalWrite(PYRO0_FIRE, LOW);
-  digitalWrite(PYRO1_FIRE, LOW);
-  digitalWrite(PYRO2_FIRE, LOW);
-  digitalWrite(PYRO3_FIRE, LOW);
 }
 
 Quaternion orientation = Quaternion();
@@ -263,7 +261,7 @@ void loop() {
   }
 
   packet.main_voltage_v = sen.readBatteryVoltage();
-
+  packet.pyro_voltage_v = sen.readPyroBatteryVoltage();
 
   if (sen.sdexists && file_flush_time >= (1000000.0 / sdSaveHZ)) {
     file_flush_time = 0;
@@ -303,6 +301,77 @@ void loop() {
     //Serial.println(sizeof(packet));
   }
 
+  while (Serial.available() >= 9 || Serial2.available() >= 9) {
+    char message[4];
+    message[3] = '\0';
+    char checksum[4];
+
+    Serial.println("Reading");
+
+    if (Serial.available() >= 9) {
+      if (Serial.read() == 0x44) {
+        if (Serial.read() == 0x55) {
+          Serial.readBytes(message, 3);
+          Serial.readBytes(checksum, 4);
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    } else if (Serial2.available() >= 9) {
+      if (Serial2.read() == 0x44) {
+        if (Serial2.read() == 0x55) {
+          Serial2.readBytes(message, 3);
+          Serial2.readBytes(checksum, 4);
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    uint32_t cs = CRC32.crc32((const uint8_t *)message, 3);
+        
+    converter.array[0] = checksum[0];
+    converter.array[1] = checksum[1];
+    converter.array[2] = checksum[2];
+    converter.array[3] = checksum[3];
+    // Serial.println(CRC32.crc32((const uint8_t *)"P0H", 3));
+    // Serial.println(converter.integer);
+    // Serial.println(cs);
+    if (converter.integer == cs) {
+      // Serial.println(message);
+      // Serial.println(strcmp(message, "H0P"));
+      if (strcmp(message, "P0H") == 0) {
+        p0.fire(pyroMillis, 2 * 1000);
+      }
+      if (strcmp(message, "P1H") == 0) {
+        p1.fire(pyroMillis, 2 * 1000);
+      }
+      if (strcmp(message, "P2H") == 0) {
+        p2.fire(pyroMillis, 2 * 1000);
+      }
+      if (strcmp(message, "P3H") == 0) {
+        p3.fire(pyroMillis, 2 * 1000);
+      }    
+      if (strcmp(message, "CAM") == 0) {
+        // 10 minutes
+        p0.fire(pyroMillis, 10*60*1000);
+      }
+      if (strcmp(message, "FUL") == 0) {
+        radioHZ = 10;
+      }
+      if (strcmp(message, "SAV") == 0) {
+        radioHZ = 1;
+      }
+    }
+
+  p0.update(&packet, pyroMillis);
+  p1.update(&packet, pyroMillis);
+  p2.update(&packet, pyroMillis);
+  p3.update(&packet, pyroMillis);
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);

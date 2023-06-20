@@ -5,7 +5,7 @@
 
 typedef struct {
   short magic;                   // 2 bytes -   2
-  byte status;                     // 1 byte  -   3
+  unsigned int status;                     // 4 byte  -   3
   unsigned int time_us;         // 4 bytes -  11
   float main_voltage_v;          // 4 bytes -  15
   float pyro_voltage_v;          // 4 bytes -  19
