@@ -20,7 +20,6 @@
 #include <structs.h>
 #include <MadgwickAHRS.h>
 #include <pyro.h>
-#include "ECEFUtils.h"
 
 #define _g_ (9.80665)
 
@@ -33,7 +32,7 @@
 #define PYRO3_FIRE 41
 #define PYRO3_CONN 14
 
-uint8_t radioHZ = 10;
+float radioHZ = 10;
 #define sdLogHZ 500
 #define sdSaveHZ 10
 
@@ -194,6 +193,7 @@ void loop() {
     baro_interrupt = false;
     bCount++;
     packet.barometer_hMSL_m = sen.readAltitude();
+    packet.temperature_c = sen.readTemperature();
 
     kf.H = {1.0, 0.0, 0.0};
     kf.update(kfTime / 1000000.0, sen.readAltitude() - initialAltitude);
@@ -213,7 +213,7 @@ void loop() {
     Vec3 gyrVec = sen.readGyro();
     // thisahrs.update(accVec,gyrVec,magVec);
     // orientation = thisahrs.q;
-    packet.temperature_c = sen.readTemperature();
+
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
     packet.acceleration_z_mss = accVec.z;
@@ -237,41 +237,11 @@ void loop() {
     q.b = packet.x;
     q.c = packet.y;
     q.d = packet.z;
-    q = ECEFUtils::ned2ecef(q, packet.longitude_degrees*PI/180, packet.latitude_degrees*PI/180);
-    packet.w = q.a;
-    packet.y = q.b;
-    packet.y = q.c;
-    packet.z = q.d;
 
     Quaternion worldFrame = q.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
     Vec3 accWorldVec(worldFrame.b, worldFrame.c, worldFrame.d);
-    //Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
-    //accWorldVec = accWorldVec + gravityVec;
-    // test_lat= test_lat+0.01;
-    // if(test_lat>PI) test_lat = -PI;
-    // Quaternion q1 = ECEFUtils::ned2ecef(q, 0, test_lat);
-    
-    // test_long= test_long+0.01;
-    // if(test_long>PI) test_long = -PI;
-    // Quaternion q2 = ECEFUtils::ned2ecef(q, test_long, 0);
-
-    // Quaternion worldFrame1 = q1.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
-    // Vec3 accTestVec1(worldFrame1.b, worldFrame1.c, worldFrame1.d);
-    // Quaternion worldFrame2 = q2.rotate(Quaternion(packet.acceleration_x_mss, packet.acceleration_y_mss, packet.acceleration_z_mss));
-    // Vec3 accTestVec2(worldFrame2.b, worldFrame2.c, worldFrame2.d);
-
-    //Serial.print(accWorldVec.x); Serial.print("\t"); Serial.print(accWorldVec.y); Serial.print("\t"); Serial.print(accWorldVec.z); Serial.print("\t");
-    //Serial.print(sqrt(accWorldVec.x*accWorldVec.x+accWorldVec.y*accWorldVec.y+accWorldVec.z*accWorldVec.z)); Serial.print(" | ");
-
-    // Serial.print(accTestVec1.x); Serial.print("\t"); Serial.print(accTestVec1.y); Serial.print("\t"); Serial.print(accTestVec1.z); Serial.print("\t");
-    // Serial.print(sqrt(accTestVec1.x*accTestVec1.x+accTestVec1.y*accTestVec1.y+accTestVec1.z*accTestVec1.z)); Serial.print(" | ");
-
-    // Serial.print(accTestVec2.x); Serial.print("\t"); Serial.print(accTestVec2.y); Serial.print("\t"); Serial.print(accTestVec2.z); Serial.print("\t");
-    // Serial.print(sqrt(accTestVec2.x*accTestVec2.x+accTestVec2.y*accTestVec2.y+accTestVec2.z*accTestVec2.z)); Serial.print(" | ");
-
-    // Serial.printf("(%f, %f)", test_lat, test_long);
-
-    Serial.println();
+    Vec3 gravityVec(0.0, 0.0, -1.0 * _g_);
+    accWorldVec = accWorldVec + gravityVec;
     
     kf.H = {0.0, 0.0, 1.0};
     kf.update(kfTime / 1000000.0, accWorldVec.z);
@@ -282,8 +252,8 @@ void loop() {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
-      sen.logPacket(packet);
-      //sen.logBinaryPacket(packet);
+      //sen.logPacket(packet);
+      sen.logBinaryPacket(packet);
     } else {
       // sets 1st bit of code to true
       packet.status |= (1<<7);
@@ -395,7 +365,7 @@ void loop() {
         radioHZ = 10;
       }
       if (strcmp(message, "SAV") == 0) {
-        radioHZ = 1;
+        radioHZ = 0.5;
       }
     }
   }
