@@ -64,7 +64,7 @@ class Sensors{
         FsFile f;
         bool sdexists = false;
 
-        char* fileName = FILE_BASE_NAME "0000.csv";
+        char* fileName = FILE_BASE_NAME "0000.bin";
 
         Sensors(){
         }
@@ -77,7 +77,12 @@ class Sensors{
 
             // magRot = Quaternion::from_euler_rotation(0, 0, 0);
             // magRot = Quaternion::from_euler_rotation(0, 0, (-1 * PI)/ 2.0);
+
+            // THIS ROTATION IS FOR SUSTAINER, IE MINERVA IS VERTICAL
             allRot = Quaternion::from_euler_rotation(0.0, PI/2.0, 0.0);
+
+            // THIS ROTATION IS FOR BOOSTER, IE MINERVA IS FLAT
+            // allRot = Quaternion::from_euler_rotation(0.0, 0, 0.0);
 
             int status;
             status = accel.begin();
@@ -248,8 +253,10 @@ class Sensors{
             float longitude = gps.getLongitude();
             return longitude;
         }
-        float readTemperature(){;
-            return accel.getTemperature_C();//(accel.getTemperature_C() + accel.getTemperature_C()) / 2.0;
+        float readTemperature() {
+            bmp5_sensor_data data = {0, 0}; 
+            baro.getSensorData(&data);
+            return data.temperature;
         }
 
         float readBatteryVoltage(){
