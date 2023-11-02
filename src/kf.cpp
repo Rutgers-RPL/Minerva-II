@@ -12,10 +12,10 @@ KalmanFilter::KalmanFilter() {
 }
 
 void KalmanFilter::predict(float dt) {
-    BLA::Matrix<3, 3> Q = {dt*dt*dt*dt/4.0, dt*dt*dt/2.0, dt*dt/2.0,
+    BLA::Matrix<3, 3, float> Q = {dt*dt*dt*dt/4.0, dt*dt*dt/2.0, dt*dt/2.0,
                          dt*dt*dt/2.0, dt*dt, dt,
                          dt*dt/2.0, dt, 1.0};
-    Q = Q * 0.02;
+    Q = Q * 0.02f;
 
     BLA::Matrix<3, 3> F = {1.0, dt, 0.5*dt*dt,
                            0.0, 1.0, dt,
