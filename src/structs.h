@@ -35,4 +35,13 @@ typedef struct {
   unsigned int checksum;         // 4 bytes - 105
 } __attribute__((packed)) minerva_II_packet;
 
+typedef struct  {
+  uint16_t magic;
+  uint16_t state_flags;
+  u_int32_t apogee_time;
+  u_int32_t drogue_time;
+  u_int32_t main_time;
+  u_int32_t sus_time;
+} __attribute__((packed)) state_packet;
+
 #endif
