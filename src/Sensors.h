@@ -64,7 +64,7 @@ class Sensors{
         FsFile f;
         bool sdexists = false;
 
-        char* fileName = FILE_BASE_NAME "0000.bin";
+        char* fileName = FILE_BASE_NAME "0000.csv";
 
         Sensors(){
         }

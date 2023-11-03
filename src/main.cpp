@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu), William Freitag (william.h.freitag@gmail.com)
+ * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
  * @brief This runs the main data collection, processing, and transmission loop for the Minerva II flight computer
  * @version 1.0
  * @date 2022-09-14
@@ -252,8 +252,8 @@ void loop() {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
-      //sen.logPacket(packet);
-      sen.logBinaryPacket(packet);
+      sen.logPacket(packet);
+      //sen.logBinaryPacket(packet);
     } else {
       // sets 1st bit of code to true
       packet.status |= (1<<7);

@@ -6,6 +6,7 @@
 #include <Quaternion.h>
 #include <BasicLinearAlgebra.h>
 #include <structs.h>
+#include "math.h"
 
 class State{
     public:
@@ -14,8 +15,15 @@ class State{
         double vel_z;
         double pos_z;
 
-        State(double arm_alt,double  arm_jump, double arm_acc, double del_drogue, double dep_main_alt);
-        uint16_t update(Quaternion q, double acc, double vel, double, double alt);
+        double last_alt;
+        double init_alt;
+
+        Pyro* drogue_channel;
+        Pyro* main_channel;
+        Pyro* sus_channel;
+
+        State(double arm_alt,double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, double curr_alt, Pyro drogue, Pyro main, Pyro sust);
+        uint16_t update(Quaternion q, float dt, double acc, double vel, double alt, elapsedMillis pyro_time);
         uint16_t fetch();
         state_packet dump();
         bool armed();
@@ -23,7 +31,7 @@ class State{
     private:
         // arming conditions
         double arming_altitude;
-        double arming_delta;
+        double arming_vel;
         double arming_acc;
 
         // deploy conditins
@@ -34,12 +42,13 @@ class State{
         double max_angle;
         double min_altitude;
         double min_time;
-
+        
+        int apg_detection_sum;
         
         /*
         state & (1 << 0) -> armed
         state & (1 << 1) -> reached arming altitude
-        state & (1 << 2) -> reached arming delta
+        state & (1 << 2) -> reached arming velocity
         state & (1 << 3) -> reached arming acceleration
         state & (1 << 4) -> reached apogee
         state & (1 << 5) -> fired drogue
