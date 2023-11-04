@@ -5,8 +5,8 @@
 
 typedef struct {
   short magic;                   // 2 bytes -   2
-  unsigned int status;                     // 4 byte  -   3
-  unsigned int time_us;         // 4 bytes -  11
+  unsigned int status;           // 4 byte  -   3
+  unsigned int time_us;          // 4 bytes -  11
   float main_voltage_v;          // 4 bytes -  15
   float pyro_voltage_v;          // 4 bytes -  19
   byte numSatellites;            // 1 byte  -  16
@@ -38,6 +38,7 @@ typedef struct {
 typedef struct  {
   uint16_t magic;
   uint16_t state_flags;
+  uint32_t arming_time;
   u_int32_t apogee_time;
   u_int32_t drogue_time;
   u_int32_t main_time;

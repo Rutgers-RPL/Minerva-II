@@ -64,7 +64,7 @@ class Sensors{
         FsFile f;
         bool sdexists = false;
 
-        char* fileName = FILE_BASE_NAME "0000.csv";
+        char* fileName = FILE_BASE_NAME "0000.bin";
 
         Sensors(){
         }
@@ -315,8 +315,8 @@ class Sensors{
             }
         }
 
-        void logBinaryPacket(const minerva_II_packet packet) {
-            f.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+        void logBinaryPacket(const void* packet, size_t bytes) {
+            f.write((const uint8_t *)packet, bytes);
         }
 
         void logPacket(const minerva_II_packet packet) {

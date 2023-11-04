@@ -10,10 +10,10 @@
 
 class State{
     public:
-        Quaternion orientation;
-        double acc_z;
-        double vel_z;
-        double pos_z;
+        // Quaternion orientation;
+        // double acc_z;
+        // double vel_z;
+        // double pos_z;
 
         double last_alt;
         double init_alt;
@@ -22,8 +22,9 @@ class State{
         Pyro* main_channel;
         Pyro* sus_channel;
 
-        State(double arm_alt,double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, double curr_alt, Pyro drogue, Pyro main, Pyro sust);
-        uint16_t update(Quaternion q, float dt, double acc, double vel, double alt, elapsedMillis pyro_time);
+        State(double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
+        void init(double curr_alt);
+        uint16_t update(double acc, double vel, double alt, elapsedMillis pyro_time, uint32_t curr_time);
         uint16_t fetch();
         state_packet dump();
         bool armed();
@@ -64,6 +65,8 @@ class State{
         state & (1 << 15) -> 
         */
         u_int16_t state;
+
+        u_int32_t arming_time;
 
         u_int32_t apogee_time;
         u_int32_t drogue_time;

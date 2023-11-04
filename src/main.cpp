@@ -20,6 +20,7 @@
 #include <structs.h>
 #include <MadgwickAHRS.h>
 #include <pyro.h>
+#include <state.h>
 
 #define _g_ (9.80665)
 
@@ -89,6 +90,9 @@ Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 Sensors sen;
 KalmanFilter kf;
 
+State state = State(100, 35, 15, 0.1, 600, p1, p2, p3);
+u_int16_t stateFlags;
+
 void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   gpsCount++;
   packet.gps_hMSL_m = ubxDataStruct->hMSL / 1000.0;
@@ -154,6 +158,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
 
   initialAltitude = sen.readAltitude();
+
+  state.init(initialAltitude);
+  stateFlags = state.fetch();
 
   Serial.print("Running Main Loop.");
 
@@ -248,12 +255,19 @@ void loop() {
     kfTime = 0;
   }
 
+  u_int16_t newStateFlags = state.update(packet.kf_acceleration_mss, packet.kf_velocity_ms, packet.kf_position_m, pyroMillis, mainTime);
+  if (stateFlags != newStateFlags)
+  {
+    state_packet s_packet = state.dump();
+    sen.logBinaryPacket(&s_packet, sizeof(state_packet));
+  }
+
   if (file_log_time >= (1000000.0 / sdLogHZ)) {
     file_log_time = 0;
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
-      sen.logPacket(packet);
-      //sen.logBinaryPacket(packet);
+      //sen.logPacket(packet);
+      sen.logBinaryPacket(&packet, sizeof(minerva_II_packet));
     } else {
       // sets 1st bit of code to true
       packet.status |= (1<<7);
