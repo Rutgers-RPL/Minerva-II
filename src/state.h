@@ -22,7 +22,7 @@ class State{
         Pyro* main_channel;
         Pyro* sus_channel;
 
-        State(double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
+        State(double arm_time, double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
         void init(double curr_alt);
         uint16_t update(double acc, double vel, double alt, elapsedMillis pyro_time, uint32_t curr_time);
         uint16_t fetch();
@@ -34,6 +34,7 @@ class State{
         double arming_altitude;
         double arming_vel;
         double arming_acc;
+        double arming_delay;
 
         // deploy conditins
         double drogue_delay;
@@ -51,11 +52,11 @@ class State{
         state & (1 << 1) -> reached arming altitude
         state & (1 << 2) -> reached arming velocity
         state & (1 << 3) -> reached arming acceleration
-        state & (1 << 4) -> reached apogee
-        state & (1 << 5) -> fired drogue
-        state & (1 << 6) -> fired main
-        state & (1 << 7) -> fired sustainer (not used [yet])
-        state & (1 << 8) -> 
+        state & (1 << 4) -> reached arming time
+        state & (1 << 5) -> reached apogee
+        state & (1 << 6) -> fired drogue
+        state & (1 << 7) -> fired main
+        state & (1 << 8) -> fired sustainer (not used [yet])
         state & (1 << 9) -> 
         state & (1 << 10) -> 
         state & (1 << 11) -> 

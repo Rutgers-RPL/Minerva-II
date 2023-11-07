@@ -90,8 +90,10 @@ Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 Sensors sen;
 KalmanFilter kf;
 
-State state = State(100, 35, 15, 0.1, 600, p1, p2, p3);
+State state = State(1.8E8, 100, 35, 15, 0.1, 600, p1, p2, p3);
 u_int16_t stateFlags;
+
+bool camOn = false;
 
 void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   gpsCount++;
@@ -260,7 +262,16 @@ void loop() {
   {
     state_packet s_packet = state.dump();
     sen.logBinaryPacket(&s_packet, sizeof(state_packet));
+
+    if(!camOn && (newStateFlags & (1 << 3)))
+    {
+      camOn = true;
+      p0.fire(pyroMillis, 10*60*1000);
+    }
+    stateFlags = newStateFlags;
   }
+
+  
 
   if (file_log_time >= (1000000.0 / sdLogHZ)) {
     file_log_time = 0;
@@ -374,6 +385,7 @@ void loop() {
       if (strcmp(message, "CAM") == 0) {
         // 10 minutes
         p0.fire(pyroMillis, 10*60*1000);
+        camOn = true;
       }
       if (strcmp(message, "FUL") == 0) {
         radioHZ = 10;
