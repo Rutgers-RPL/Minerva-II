@@ -21,11 +21,6 @@
 
 class State{
     public:
-        // Quaternion orientation;
-        // double acc_z;
-        // double vel_z;
-        // double pos_z;
-
         double last_alt;
         double init_alt;
 

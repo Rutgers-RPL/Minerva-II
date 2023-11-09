@@ -90,7 +90,14 @@ Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 Sensors sen;
 KalmanFilter kf;
 
-State state = State(1.8E8, 100, 35, 15, 0.1, 600, p1, p2, p3);
+
+const double arming_time_delay = 1.8E8;
+const double arming_altitude = 100;
+const double arming_velocity = 35;
+const double arming_acceleration = 15;
+const double drogue_delay = 0.1;
+const double main_deploy_altitude = 600;
+State state = State(arming_time_delay, arming_altitude, arming_velocity, arming_acceleration, drogue_delay, main_deploy_altitude, p1, p2, p3);
 u_int16_t stateFlags;
 
 bool camOn = false;
