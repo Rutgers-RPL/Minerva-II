@@ -263,7 +263,7 @@ void loop() {
     state_packet s_packet = state.dump();
     sen.logBinaryPacket(&s_packet, sizeof(state_packet));
 
-    if(!camOn && (newStateFlags & (1 << 3)))
+    if(!camOn && state.checkState(REACHED_ARMING_ACCELERATION))
     {
       camOn = true;
       p0.fire(pyroMillis, 10*60*1000);
@@ -385,6 +385,7 @@ void loop() {
       if (strcmp(message, "CAM") == 0) {
         // 10 minutes
         p0.fire(pyroMillis, 10*60*1000);
+        //p3.fire(pyroMillis, 10*60*1000);
         camOn = true;
       }
       if (strcmp(message, "FUL") == 0) {

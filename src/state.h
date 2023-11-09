@@ -8,6 +8,17 @@
 #include <structs.h>
 #include "math.h"
 
+#define ARMED 1<<0
+#define REACHED_ARMING_ALTITUDE 1<<1
+#define REACHED_ARMING_VELOCITY 1<<2
+#define REACHED_ARMING_ACCELERATION 1<<3
+#define REACHED_ARMING_DELAY 1<<4
+#define REACHED_APOGEE 1<<5
+#define FIRED_DROGUE 1<<6
+#define FIRED_MAIN 1<<7
+#define FIRED_SUSTAINER 1<<8
+
+
 class State{
     public:
         // Quaternion orientation;
@@ -28,6 +39,7 @@ class State{
         uint16_t fetch();
         state_packet dump();
         bool armed();
+        bool checkState(u_int8_t flag);
 
     private:
         // arming conditions
@@ -52,7 +64,7 @@ class State{
         state & (1 << 1) -> reached arming altitude
         state & (1 << 2) -> reached arming velocity
         state & (1 << 3) -> reached arming acceleration
-        state & (1 << 4) -> reached arming time
+        state & (1 << 4) -> reached arming delay time
         state & (1 << 5) -> reached apogee
         state & (1 << 6) -> fired drogue
         state & (1 << 7) -> fired main
@@ -73,6 +85,8 @@ class State{
         u_int32_t drogue_time;
         u_int32_t main_time;
         u_int32_t sus_time;
+
+        void setState(uint8_t flag);
 
 };
 
