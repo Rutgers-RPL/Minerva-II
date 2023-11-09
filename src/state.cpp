@@ -102,7 +102,7 @@ uint16_t State::fetch()
 };
 
 bool State::armed(){
-    return (this->state & (1 << ARMED)) == 1;
+    return (bool) (this->state & ARMED);
 }
 
 bool State::checkState(u_int8_t flag)
