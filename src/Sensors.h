@@ -316,6 +316,7 @@ class Sensors{
         }
 
         void logBinaryPacket(const void* packet, size_t bytes) {
+            // Serial.printf("Packet Address: %p, First Byte: %x \n", packet, ((uint8_t *) packet)[0]);
             f.write((const uint8_t *)packet, bytes);
         }
 

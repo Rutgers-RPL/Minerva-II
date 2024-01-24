@@ -265,7 +265,8 @@ void loop() {
   }
 
   u_int16_t newStateFlags = state.update(packet.kf_acceleration_mss, packet.kf_velocity_ms, packet.kf_position_m, pyroMillis, mainTime);
-  if (stateFlags != newStateFlags)
+
+  if (file_log_time >= (1000000.0 / sdLogHZ))
   {
     state_packet s_packet = state.dump();
     sen.logBinaryPacket(&s_packet, sizeof(state_packet));
@@ -285,6 +286,7 @@ void loop() {
     if (sen.sdexists && sen.f) {
       packet.status &= ~(1<<7);
       //sen.logPacket(packet);
+      // Serial.printf("Packet Address: %p, First Byte: %x, First Int: %.2x \n", &packet, ((u_int8_t *) &packet)[0], packet.magic);
       sen.logBinaryPacket(&packet, sizeof(minerva_II_packet));
     } else {
       // sets 1st bit of code to true
@@ -411,8 +413,8 @@ void loop() {
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-  Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  // Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  // Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
  }
  tCount++;
 }

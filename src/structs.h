@@ -3,14 +3,15 @@
 
 #include <Arduino.h>
 
+
 typedef struct {
-  short magic;                   // 2 bytes -   2
-  unsigned int status;           // 4 byte  -   3
-  unsigned int time_us;          // 4 bytes -  11
+  u_int16_t magic;                   // 2 bytes -   2
+  u_int32_t status;           // 4 byte  -   3
+  u_int32_t time_us;          // 4 bytes -  11
   float main_voltage_v;          // 4 bytes -  15
   float pyro_voltage_v;          // 4 bytes -  19
-  byte numSatellites;            // 1 byte  -  16
-  byte gpsFixType;               // 1 byte  -  17
+  uint8_t numSatellites;            // 1 byte  -  16
+  uint8_t gpsFixType;               // 1 byte  -  17
   float latitude_degrees;        // 4 bytes -  21
   float longitude_degrees;       // 4 bytes -  25
   float gps_hMSL_m;              // 4 bytes -  29
