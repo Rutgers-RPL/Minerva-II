@@ -29,7 +29,7 @@ class State{
         Pyro* sus_channel;
 
         State(double arm_time, double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
-        void init(double curr_alt);
+        void init();
         uint16_t update(double acc, double vel, double alt, elapsedMillis pyro_time, uint32_t curr_time);
         uint16_t fetch();
         state_packet dump();

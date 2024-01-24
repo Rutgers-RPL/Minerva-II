@@ -168,7 +168,7 @@ void setup() {
 
   initialAltitude = sen.readAltitude();
 
-  state.init(initialAltitude);
+  state.init();
   stateFlags = state.fetch();
 
   Serial.print("Running Main Loop.");

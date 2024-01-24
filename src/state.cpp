@@ -21,11 +21,11 @@ State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, do
     this->sus_channel = &sust;
 };
 
-void State::init(double curr_alt)
+void State::init()
 {
-    this->init_alt = curr_alt;
-    this->last_alt = curr_alt;
-    this->arming_altitude = this->arming_altitude+curr_alt;
+    this->init_alt = 0;
+    this->last_alt = 0;
+    this->arming_altitude = this->arming_altitude;
 
 }
 
