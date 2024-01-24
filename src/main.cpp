@@ -413,8 +413,8 @@ void loop() {
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  // Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-  // Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
  }
  tCount++;
 }
