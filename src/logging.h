@@ -27,7 +27,16 @@ class Logging{
 
         Logging(minerva_II_packet packet);
 
-        template <typename T> void logBinaryPacket(const T* packet);
+        template <typename T> void logBinaryPacket(const T* packet)
+        {
+            bufferCount++;
+            this->dataFile.write((const uint8_t *)packet, sizeof(T));
+            if (bufferCount >= LOGGING_BUFFER_SIZE)
+            {
+                this->dataFile.sync();   
+                bufferCount = 0;
+            }
+        };
 
         void logM2Packet(const minerva_II_packet packet);
         void printM2Packet(const minerva_II_packet packet);

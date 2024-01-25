@@ -68,17 +68,6 @@ Logging::Logging(minerva_II_packet packet)
     this->bufferCount = 0;
 };
 
-template <typename T> void Logging::logBinaryPacket(const T* packet)
-{
-    bufferCount++;
-    this->dataFile.write((const uint8_t *)packet, sizeof(T));
-    if (bufferCount >= LOGGING_BUFFER_SIZE)
-    {
-        this->dataFile.sync();   
-        bufferCount = 0;
-    }
-};
-
 void Logging::updateSummary(const minerva_II_packet packet1, const state_packet packet2)
 {
     if(packet1.kf_acceleration_mss > max_acc)

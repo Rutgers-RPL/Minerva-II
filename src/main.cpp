@@ -21,6 +21,7 @@
 #include <MadgwickAHRS.h>
 #include <pyro.h>
 #include <state.h>
+#include <logging.h>
 
 #define _g_ (9.80665)
 
@@ -90,6 +91,7 @@ Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 Sensors sen;
 KalmanFilter kf;
 
+Logging logger(packet);
 
 const double arming_time_delay = 1.8E8;
 const double arming_altitude = 100;
@@ -144,7 +146,6 @@ void setup() {
   Serial2.flush();
 
   sen.init(packet);
-  sen.beginSD(packet);
 
   byte attempts = 1;
   while (!gps.setAutoPVTcallbackPtr(&printPVTData) && attempts <= 10) {
@@ -265,35 +266,18 @@ void loop() {
   }
 
   u_int16_t newStateFlags = state.update(packet.kf_acceleration_mss, packet.kf_velocity_ms, packet.kf_position_m, pyroMillis, mainTime);
+  state_packet s_packet = state.dump();
 
-  if (file_log_time >= (1000000.0 / sdLogHZ))
+  logger.logBinaryPacket(&(s_packet));
+
+  if(!camOn && state.checkState(REACHED_ARMING_ACCELERATION))
   {
-    state_packet s_packet = state.dump();
-    sen.logBinaryPacket(&s_packet, sizeof(state_packet));
-
-    if(!camOn && state.checkState(REACHED_ARMING_ACCELERATION))
-    {
-      camOn = true;
-      p0.fire(pyroMillis, 10*60*1000);
-    }
-    stateFlags = newStateFlags;
+    camOn = true;
+    p0.fire(pyroMillis, 10*60*1000);
   }
+  stateFlags = newStateFlags;
 
-  
-
-  if (file_log_time >= (1000000.0 / sdLogHZ)) {
-    file_log_time = 0;
-    if (sen.sdexists && sen.f) {
-      packet.status &= ~(1<<7);
-      //sen.logPacket(packet);
-      // Serial.printf("Packet Address: %p, First Byte: %x, First Int: %.2x \n", &packet, ((u_int8_t *) &packet)[0], packet.magic);
-      sen.logBinaryPacket(&packet, sizeof(minerva_II_packet));
-    } else {
-      // sets 1st bit of code to true
-      packet.status |= (1<<7);
-    }
-    
-  }
+  logger.logBinaryPacket(&packet);
 
   packet.main_voltage_v = sen.readBatteryVoltage();
   packet.pyro_voltage_v = sen.readPyroBatteryVoltage();
