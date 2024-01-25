@@ -11,7 +11,7 @@
 #define SUMMARY_FILE_BASE_NAME String('FlightSummary_')
 #define SUMMARY_FILE_BASE_TYPE String(".txt")
 #define BASE_NAME_SIZE (sizeof(FILE_BASE_NAME) - 1)
-#define LOGGING_BUFFER_SIZE = 50 // leq 255
+#define LOGGING_BUFFER_SIZE 50 // leq 255
 
 class Logging{
     public:

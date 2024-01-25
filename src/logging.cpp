@@ -37,7 +37,7 @@ Logging::Logging(minerva_II_packet packet)
 
             // SUMMARY FILE
 
-            uint16_t n_file = 0;
+            n_file = 0;
             this->summaryFileName = SUMMARY_FILE_BASE_NAME + "0000" + SUMMARY_FILE_BASE_TYPE;
             while(sd.exists(this->summaryFileName))
             {
