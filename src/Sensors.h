@@ -15,9 +15,6 @@
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 
-#define FILE_BASE_NAME "FlightLog_"
-const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
-
 const uint8_t batteryPin = 21;
 const uint8_t pyroBatteryPin = 22;
 const uint8_t baro_i2c_address = 0x46;
@@ -59,12 +56,6 @@ class Sensors{
 
         Mat3x3 M;
         Vec3 b;
-
-        SdFs sd;
-        FsFile f;
-        bool sdexists = false;
-
-        char* fileName = FILE_BASE_NAME "0000.bin";
 
         Sensors(){
         }

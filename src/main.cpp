@@ -282,11 +282,6 @@ void loop() {
   packet.main_voltage_v = sen.readBatteryVoltage();
   packet.pyro_voltage_v = sen.readPyroBatteryVoltage();
 
-  if (sen.sdexists && file_flush_time >= (1000000.0 / sdSaveHZ)) {
-    file_flush_time = 0;
-    sen.f.flush();
-  }
-
   if (printTime >= 50000) {
     printTime = 0;
     //Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
