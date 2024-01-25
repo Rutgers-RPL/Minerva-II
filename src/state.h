@@ -35,7 +35,10 @@ class State{
         state_packet dump();
         bool armed();
         bool checkState(u_int8_t flag);
-
+        
+        
+        static bool checkState(state_packet packet, uint8_t flag);
+        
     private:
         // arming conditions
         double arming_altitude;

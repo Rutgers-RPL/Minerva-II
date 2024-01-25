@@ -110,6 +110,11 @@ bool State::checkState(u_int8_t flag)
     return (bool) (this->state & flag);
 }
 
+static bool checkState(state_packet packet, uint8_t flag)
+{
+    return (bool) (packet.state_flags & flag);
+}
+
 state_packet State::dump()
 {
     state_packet s;
