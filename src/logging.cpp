@@ -109,3 +109,69 @@ void Logging::updateSummary(const minerva_II_packet packet1, const state_packet 
     }
 
 };
+
+void Logging::logM2Packet(const minerva_II_packet packet) {
+    this->dataFile.print(packet.magic); this->dataFile.print(","); 
+    this->dataFile.print(packet.status); this->dataFile.print(","); 
+    this->dataFile.print(packet.time_us); this->dataFile.print(",");
+    this->dataFile.print(packet.main_voltage_v); this->dataFile.print(",");
+    this->dataFile.print(packet.pyro_voltage_v); this->dataFile.print(",");
+    this->dataFile.print(packet.numSatellites); this->dataFile.print(",");
+    this->dataFile.print(packet.gpsFixType); this->dataFile.print(",");
+    this->dataFile.print(packet.latitude_degrees, 5); this->dataFile.print(",");
+    this->dataFile.print(packet.longitude_degrees, 5); this->dataFile.print(",");
+    this->dataFile.print(packet.gps_hMSL_m); this->dataFile.print(",");
+    this->dataFile.print(packet.barometer_hMSL_m); this->dataFile.print(",");
+    this->dataFile.print(packet.temperature_c); this->dataFile.print(",");
+    this->dataFile.print(packet.acceleration_x_mss, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.acceleration_y_mss, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.acceleration_z_mss, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.angular_velocity_x_rads, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.angular_velocity_y_rads, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.angular_velocity_z_rads, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.gauss_x, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.gauss_y, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.gauss_z, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.kf_acceleration_mss, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.kf_velocity_ms, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.kf_position_m, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.w, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.x, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.y, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.z, 3); this->dataFile.print(",");
+    this->dataFile.print(packet.checksum); this->dataFile.print(",");
+    this->dataFile.println();
+};
+
+void Logging::printM2Packet(const minerva_II_packet packet) {
+    Serial.print(packet.magic); Serial.print("\t"); 
+    Serial.print(packet.status); Serial.print("\t"); 
+    Serial.print(packet.time_us); Serial.print("\t");
+    Serial.print(packet.main_voltage_v); Serial.print("\t");
+    Serial.print(packet.pyro_voltage_v); Serial.print(",");
+    Serial.print(packet.numSatellites); Serial.print("\t");
+    Serial.print(packet.gpsFixType); Serial.print("\t");
+    Serial.print(packet.latitude_degrees); Serial.print("\t");
+    Serial.print(packet.longitude_degrees); Serial.print("\t");
+    Serial.print(packet.gps_hMSL_m); Serial.print("\t");
+    Serial.print(packet.barometer_hMSL_m); Serial.print("\t");
+    Serial.print(packet.temperature_c); Serial.print("\t");
+    Serial.print(packet.acceleration_x_mss); Serial.print("\t");
+    Serial.print(packet.acceleration_y_mss); Serial.print("\t");
+    Serial.print(packet.acceleration_z_mss); Serial.print("\t");
+    Serial.print(packet.angular_velocity_x_rads); Serial.print("\t");
+    Serial.print(packet.angular_velocity_y_rads); Serial.print("\t");
+    Serial.print(packet.angular_velocity_z_rads); Serial.print("\t");
+    Serial.print(packet.gauss_x); Serial.print("\t");
+    Serial.print(packet.gauss_y); Serial.print("\t");
+    Serial.print(packet.gauss_z); Serial.print("\t");
+    Serial.print(packet.kf_acceleration_mss); Serial.print("\t");
+    Serial.print(packet.kf_velocity_ms); Serial.print("\t");
+    Serial.print(packet.kf_position_m); Serial.print("\t");
+    Serial.print(packet.w); Serial.print("\t");
+    Serial.print(packet.x); Serial.print("\t");
+    Serial.print(packet.y); Serial.print("\t");
+    Serial.print(packet.z); Serial.print("\t");
+    Serial.print(packet.checksum); Serial.print("\t");
+    Serial.println();
+};
