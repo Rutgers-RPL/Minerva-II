@@ -209,6 +209,8 @@ void loop() {
   if (baro_interrupt) {
     baro_interrupt = false;
     bCount++;
+
+    
     packet.barometer_hMSL_m = sen.readAltitude();
     packet.temperature_c = sen.readTemperature();
 
