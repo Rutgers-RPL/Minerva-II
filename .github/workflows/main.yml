@@ -37,13 +37,13 @@ jobs:
           unzip "/tmp/*.zip" -d /tmp
 
       - name: Run PlatformIO
-        run: pio ci --lib="." --lib="/tmp/Quaternion" 
-                -l="/tmp/SparkFun_BMP581_Arduino_Library" 
-                -l="/tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library" 
-                -l="/tmp/bmi088-arduino" 
-                -l="/tmp/SparkFun_u-blox_GNSS_Arduino_Library"
-                -l="/tmp/MadgwickAHRS"
-                -l="/tmp/BasicLinearAlgebra"
+        run: pio ci --lib="." --lib="/tmp/Quaternion-develop/" 
+                -l="/tmp/SparkFun_BMP581_Arduino_Library-main" 
+                -l="/tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library-main" 
+                -l="bmi088-arduino-main" 
+                -l="/tmp/SparkFun_u-blox_GNSS_Arduino_Library-main"
+                -l="/tmp/MadgwickAHRS-master/"
+                -l="/tmp/BasicLinearAlgebra-master/"
                 --board=teensy41
         env:
           PLATFORMIO_CI_SRC: ./src/
