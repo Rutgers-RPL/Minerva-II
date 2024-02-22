@@ -41,6 +41,8 @@ class Logging{
         void logM2Packet(const minerva_II_packet packet);
         void printM2Packet(const minerva_II_packet packet);
 
+        static minerva_II_packet empty_M2_packet();
+
     private:
         u_int8_t bufferCount;
         u_int8_t updateCount;

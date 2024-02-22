@@ -39,6 +39,7 @@ float radioHZ = 10;
 #define sdSaveHZ 10
 
 minerva_II_packet packet;
+minerva_II_packet test_packet;
 
 FastCRC32 CRC32;
 
@@ -141,7 +142,7 @@ void gyroInterruptHandler() {
 void setup() {
   packet.magic = magic;
   Serial.begin(115200);
-  Serial2.begin(115200);
+  Serial2.begin(115200, SERIAL_8E1);
   Serial.flush();
   Serial2.flush();
 
@@ -165,7 +166,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(acc_int_pin), accInterruptHandler, RISING);
-  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
+  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING);
 
   initialAltitude = sen.readAltitude();
 
@@ -218,6 +219,7 @@ void loop() {
   }
 
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
+  // if (acc_interrupt && gyro_interrupt && true) { <- NO MAG
     mag.clearMeasDoneInterrupt();
     acc_interrupt = false;
     gyro_interrupt = false;
@@ -226,10 +228,9 @@ void loop() {
     gCount++;
     mCount++;
     Vec3 magVec = sen.readMag();
+    // Vec3 magVec = Vec3(0,0,0); <- NO MAG
     Vec3 accVec = sen.readAccel();
     Vec3 gyrVec = sen.readGyro();
-    // thisahrs.update(accVec,gyrVec,magVec);
-    // orientation = thisahrs.q;
 
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
@@ -245,10 +246,13 @@ void loop() {
     packet.x = AHRS.q1;
     packet.y = AHRS.q2;
     packet.z = AHRS.q3;
-    // packet.w = orientation.a;
-    // packet.x = orientation.b;
-    // packet.y = orientation.c;
-    // packet.z = orientation.d;
+
+    // NO MAG
+    // packet.w = 0;
+    // packet.x = 0;
+    // packet.y = 0;
+    // packet.z = 0;
+
     Quaternion q;
     q.a = packet.w;
     q.b = packet.x;
@@ -392,8 +396,8 @@ void loop() {
  if (packetTime >= 1000000.0 / radioHZ) {
   packetTime = 0;
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
   Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
  }
  tCount++;
 }

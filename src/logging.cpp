@@ -38,24 +38,24 @@ Logging::Logging(minerva_II_packet packet)
 
             // SUMMARY FILE
 
-            n_file = 0;
-            this->summaryFileName = SUMMARY_FILE_BASE_NAME + "0000" + SUMMARY_FILE_BASE_TYPE;
-            while(sd.exists(this->summaryFileName))
-            {
-                n_file++;
-                char fIdx[32];
-                sprintf(fIdx, "%04d", n_file);
-                this->summaryFileName = DATA_FILE_BASE_NAME + fIdx + DATA_FILE_BASE_TYPE;
-            }
+            // n_file = 0;
+            // this->summaryFileName = SUMMARY_FILE_BASE_NAME + "0000" + SUMMARY_FILE_BASE_TYPE;
+            // while(sd.exists(this->summaryFileName))
+            // {
+            //     n_file++;
+            //     char fIdx[32];
+            //     sprintf(fIdx, "%04d", n_file);
+            //     this->summaryFileName = DATA_FILE_BASE_NAME + fIdx + DATA_FILE_BASE_TYPE;
+            // }
 
-            this->summaryFile = sd.open(this->summaryFileName, FILE_WRITE);
-            Serial.print("Writing summary to: ");
-            Serial.println(this->summaryFileName);
-            if (!this->dataFile) {
-                packet.status |= 1<<7;
-                Serial.println("Failed opening summary file.");
-                break;
-            }
+            // this->summaryFile = sd.open(this->summaryFileName, FILE_WRITE);
+            // Serial.print("Writing summary to: ");
+            // Serial.println(this->summaryFileName);
+            // if (!this->dataFile) {
+            //     packet.status |= 1<<7;
+            //     Serial.println("Failed opening summary file.");
+            //     break;
+            // }
 
             this->sdExists = true;
         }
@@ -164,3 +164,37 @@ void Logging::printM2Packet(const minerva_II_packet packet) {
     Serial.print(packet.checksum); Serial.print("\t");
     Serial.println();
 };
+
+minerva_II_packet Logging::empty_M2_packet()
+{
+    minerva_II_packet test_packet;
+    test_packet.time_us = 0;
+    test_packet.main_voltage_v = 0;
+    test_packet.pyro_voltage_v = 0;
+    test_packet.numSatellites = 0;
+    test_packet.gpsFixType = 0;
+    test_packet.latitude_degrees = 0;
+    test_packet.longitude_degrees = 0;
+    test_packet.gps_hMSL_m = 0;
+    test_packet.barometer_hMSL_m = 0;
+    test_packet.temperature_c = 0;
+    test_packet.acceleration_x_mss = 0;
+    test_packet.acceleration_y_mss = 0;
+    test_packet.acceleration_z_mss = 0;
+    test_packet.angular_velocity_x_rads = 0;
+    test_packet.angular_velocity_y_rads = 0;
+    test_packet.angular_velocity_z_rads = 0;
+    test_packet.gauss_x = 0;
+    test_packet.gauss_y = 0;
+    test_packet.gauss_z = 0;
+    test_packet.kf_acceleration_mss = 0;
+    test_packet.kf_velocity_ms = 0;
+    test_packet.kf_position_m = 0;
+    test_packet.w = 0;
+    test_packet.x = 0;
+    test_packet.y = 0;
+    test_packet.z = 0;
+    test_packet.checksum = 0;
+
+  return test_packet;
+}
