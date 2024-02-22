@@ -216,7 +216,8 @@ class Sensors{
             Quaternion q(normalized[0], normalized[1], -1.0 * normalized[2]);
             // q = magRot.rotate(q);
             q = allRot.rotate(q);
-            return Vec3(q.b, q.c, q.d);
+            //return Vec3(q.b, q.c, q.d);
+            return Vec3(0, 0, 0);
         }
 
 
