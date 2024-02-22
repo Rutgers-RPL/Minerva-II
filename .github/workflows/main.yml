@@ -29,7 +29,7 @@ jobs:
         run: |
           wget https://github.com/xxxajk/spi4teensy3/archive/master.zip -O /tmp/spi4teensy3.zip
           wget https://github.com/carrino/Quaternion/archive/master.zip -O /tmp/Quaternion.zip
-          wget https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library -O /tmp/SparkFun_BMP581_Arduino_Librar.zip
+          wget https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library -O /tmp/SparkFun_BMP581_Arduino_Library.zip
           wget https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library -O /tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library.zip 
           wget https://github.com/bolderflight/bmi088-arduino -O /tmp/bmi088-arduino.zip
           wget https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library -O /tmp/SparkFun_u-blox_GNSS_Arduino_Library
