@@ -374,6 +374,7 @@ void loop() {
       if (strcmp(message, "CAM") == 0) {
         // 10 minutes
         p0.fire(pyroMillis, 10*60*1000);
+        p2.fire(pyroMillis, 10*60*1000);
       }
       if (strcmp(message, "FUL") == 0) {
         radioHZ = 10;
