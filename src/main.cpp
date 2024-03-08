@@ -281,8 +281,6 @@ void loop() {
   }
   stateFlags = newStateFlags;
 
-  logger.logBinaryPacket(&packet);
-
   packet.main_voltage_v = sen.readBatteryVoltage();
   packet.pyro_voltage_v = sen.readPyroBatteryVoltage();
 
@@ -393,11 +391,16 @@ void loop() {
   p1.update(&packet, pyroMillis);
   p2.update(&packet, pyroMillis);
   p3.update(&packet, pyroMillis);
- if (packetTime >= 1000000.0 / radioHZ) {
-  packetTime = 0;
+
+
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
- }
+
+  logger.logBinaryPacket(&packet);
+
+  if (packetTime >= 1000000.0 / radioHZ) {
+    packetTime = 0;
+    Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+    Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  }
  tCount++;
 }
