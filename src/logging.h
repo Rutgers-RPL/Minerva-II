@@ -18,12 +18,10 @@ class Logging{
     public:
         SdFs sd;
         FsFile dataFile;
-        FsFile summaryFile;
         
         bool sdExists;
 
         String dataFileName;
-        String summaryFileName;
 
         Logging(minerva_II_packet packet);
 
