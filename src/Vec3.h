@@ -1,3 +1,15 @@
+/**
+ * @file Vec3.h
+ * @author William Freitag (william.h.freitag@gmail.com)
+ * @brief A simple 3 vector class that uses only static memory allocation
+ * @version 2.0
+ * @date 2024-03-28
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
+
 #ifndef Vec3_H
 #define Vec3_H
 #include <cmath>
