@@ -1,14 +1,3 @@
-/**
- * @file main.cpp
- * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
- * @brief This runs the main data collection, processing, and transmission loop for the Minerva II flight computer
- * @version 1.0
- * @date 2022-09-14
- * 
- * @copyright Copyright (c) 2022
- * 
- */
-
 #include <Arduino.h>
 #include <SdFat.h>
 #include <FastCRC.h>
