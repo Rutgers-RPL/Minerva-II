@@ -6,7 +6,6 @@
 #include <Vec3.h>
 #include <Mat3x3.h>
 #include <EEPROM.h>
-#include <filters.h>
 #include <string.h>
 #include <structs.h>
 
