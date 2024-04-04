@@ -377,6 +377,7 @@ void loop() {
         p0.fire(pyroMillis, 10*60*1000);
         //p3.fire(pyroMillis, 10*60*1000);
         camOn = true;
+
       }
       if (strcmp(message, "FUL") == 0) {
         radioHZ = 10;
