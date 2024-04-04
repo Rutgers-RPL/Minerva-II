@@ -129,10 +129,15 @@ class Sensors{
             SPI1.setMISO(39);
             SPI1.setMOSI(26);
             SPI1.begin();
+            mag.setErrorCallback([](SF_MMC5983MA_ERROR code) {
+                Serial.println(mag.errorCodeString(code));
+            });
             status = mag.begin(mag_cs, SPI1);
+            mag.enable3WireSPI();
             while (!status) {
                 Serial.println("Mag Initialization Error");
                 Serial.println(status);
+                mag.softReset();
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
