@@ -27,7 +27,7 @@ jobs:
 
       - name: Download external library
         run: |
-          if (${{ runner.os }} -in "ubuntu-latest,macos-latest") {
+          if (${{ runner.os }} -in "ubuntu-latest,macos-latest,Linux") {
             wget https://github.com/carrino/Quaternion/archive/master.zip -O /tmp/Quaternion.zip
             wget https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library/archive/master.zip -O /tmp/SparkFun_BMP581_Arduino_Library.zip
             wget https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library/archive/master.zip -O /tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library.zip 
