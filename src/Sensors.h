@@ -1,3 +1,14 @@
+/**
+ * @file Sensors.h
+ * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
+ * @brief This initializes and manages the oboard sensors.
+ * @version 1.2
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef Sensors_H
 #define Sensors_H
 #include <Arduino.h>

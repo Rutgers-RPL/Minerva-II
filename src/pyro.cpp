@@ -1,3 +1,14 @@
+/**
+ * @file pyro.cpp
+ * @author Carlton Wu (carlton.wu@rutgers.edu)
+ * @brief This manages the onboard pyro channels of the flight computer
+ * @version 1.1
+ * @date 2024-06-19
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <pyro.h>
 #include <structs.h>
 

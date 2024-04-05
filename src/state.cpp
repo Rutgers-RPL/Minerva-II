@@ -1,3 +1,14 @@
+/**
+ * @file state.cpp
+ * @author Shivam Patel (shivam.patel94@rutgers.edu)
+ * @brief This detects and records the estimated state of the rocket over the course of the flight
+ * @version 1.1
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "state.h"
 
 State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust)

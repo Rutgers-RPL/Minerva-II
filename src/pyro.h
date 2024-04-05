@@ -1,3 +1,14 @@
+/**
+ * @file pyro.cpp
+ * @author Carlton Wu (carlton.wu@rutgers.edu)
+ * @brief This declares the necessary variables and functions to use the onboard pyro channels
+ * @version 1.1
+ * @date 2024-06-19
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef Pyro_H
 #define Pyro_H
 

@@ -1,3 +1,14 @@
+/**
+ * @file logging.h
+ * @author Shivam Patel (shivam.patel94@rutgers.edu)
+ * @brief Outlines the functions and variables necessary to manange data logging
+ * @version 1.0
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef Logging_H
 #define Logging_H
 

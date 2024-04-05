@@ -1,5 +1,15 @@
-#include "logging.h"
+/**
+ * @file logging.cpp
+ * @author Shivam Patel (shivam.patel94@rutgers.edu)
+ * @brief Manages logging flight data logging to flash memory
+ * @version 1.0
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 
+#include "logging.h"
 
 Logging::Logging(minerva_II_packet packet)
 {

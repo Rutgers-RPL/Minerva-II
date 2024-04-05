@@ -1,3 +1,14 @@
+/**
+ * @file state.cpp
+ * @author Shivam Patel (shivam.patel94@rutgers.edu)
+ * @brief Outlines the functions and variables realted to detecting flight state events.
+ * @version 1.1
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef State_H
 #define State_H
 
