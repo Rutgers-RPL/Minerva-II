@@ -27,14 +27,26 @@ jobs:
 
       - name: Download external library
         run: |
-          wget https://github.com/carrino/Quaternion/archive/master.zip -O /tmp/Quaternion.zip
-          wget https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library/archive/master.zip -O /tmp/SparkFun_BMP581_Arduino_Library.zip
-          wget https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library/archive/master.zip -O /tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library.zip 
-          wget https://github.com/bolderflight/bmi088-arduino/archive/master.zip -O /tmp/bmi088-arduino.zip
-          wget https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library/archive/master.zip -O /tmp/SparkFun_u-blox_GNSS_Arduino_Library.zip
-          wget https://github.com/shivammpat/MadgwickAHRS/archive/master.zip -O /tmp/MadgwickAHRS.zip
-          wget https://github.com/tomstewart89/BasicLinearAlgebra/archive/master.zip -O /tmp/BasicLinearAlgebra.zip
-          unzip "/tmp/*.zip" -d /tmp
+          if (${{ runner.os }} -in "ubuntu-latest,macos-latest") {
+            wget https://github.com/carrino/Quaternion/archive/master.zip -O /tmp/Quaternion.zip
+            wget https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library/archive/master.zip -O /tmp/SparkFun_BMP581_Arduino_Library.zip
+            wget https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library/archive/master.zip -O /tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library.zip 
+            wget https://github.com/bolderflight/bmi088-arduino/archive/master.zip -O /tmp/bmi088-arduino.zip
+            wget https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library/archive/master.zip -O /tmp/SparkFun_u-blox_GNSS_Arduino_Library.zip
+            wget https://github.com/shivammpat/MadgwickAHRS/archive/master.zip -O /tmp/MadgwickAHRS.zip
+            wget https://github.com/tomstewart89/BasicLinearAlgebra/archive/master.zip -O /tmp/BasicLinearAlgebra.zip
+            unzip "/tmp/*.zip" -d /tmp
+          }
+          else{
+            Invoke-WebRequest -Uri "https://github.com/carrino/Quaternion/archive/master.zip" -Outfile /tmp/Quaternion.zip
+            Invoke-WebRequest -Uri "https://github.com/sparkfun/SparkFun_BMP581_Arduino_Library/archive/master.zip" -Outfile /tmp/SparkFun_BMP581_Arduino_Library.zip
+            Invoke-WebRequest -Uri "https://github.com/sparkfun/SparkFun_MMC5983MA_Magnetometer_Arduino_Library/archive/master.zip" -Outfile /tmp/SparkFun_MMC5983MA_Magnetometer_Arduino_Library.zip 
+            Invoke-WebRequest -Uri "https://github.com/bolderflight/bmi088-arduino/archive/master.zip" -Outfile /tmp/bmi088-arduino.zip
+            Invoke-WebRequest -Uri "https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library/archive/master.zip -Outfile /tmp/SparkFun_u-blox_GNSS_Arduino_Library.zip
+            Invoke-WebRequest -Uri "https://github.com/shivammpat/MadgwickAHRS/archive/master.zip" -Outfile /tmp/MadgwickAHRS.zip
+            Invoke-WebRequest -Uri "https://github.com/tomstewart89/BasicLinearAlgebra/archive/master.zip" -Outfile /tmp/BasicLinearAlgebra.zip
+            Expand-Archive -Path /tmp/*.zip -DestinationPath /tmp -Force
+          }
 
       - name: Run PlatformIO
         run: pio ci --lib="." --lib="/tmp/Quaternion-develop/" 
