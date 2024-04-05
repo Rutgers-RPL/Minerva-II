@@ -1,3 +1,14 @@
+/**
+ * @file Sensors.h
+ * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
+ * @brief This initializes and manages the oboard sensors.
+ * @version 1.2
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef Sensors_H
 #define Sensors_H
 #include <Arduino.h>
@@ -13,9 +24,6 @@
 #include <SparkFun_BMP581_Arduino_Library.h>
 #include <SparkFun_MMC5983MA_Arduino_Library.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-
-#define FILE_BASE_NAME "FlightLog_"
-const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
 
 const uint8_t batteryPin = 21;
 const uint8_t pyroBatteryPin = 22;
@@ -58,12 +66,6 @@ class Sensors{
 
         Mat3x3 M;
         Vec3 b;
-
-        SdFs sd;
-        FsFile f;
-        bool sdexists = false;
-
-        char* fileName = FILE_BASE_NAME "0000.bin";
 
         Sensors(){
         }
@@ -138,10 +140,15 @@ class Sensors{
             SPI1.setMISO(39);
             SPI1.setMOSI(26);
             SPI1.begin();
+            mag.setErrorCallback([](SF_MMC5983MA_ERROR code) {
+                Serial.println(mag.errorCodeString(code));
+            });
             status = mag.begin(mag_cs, SPI1);
+            mag.enable3WireSPI();
             while (!status) {
                 Serial.println("Mag Initialization Error");
                 Serial.println(status);
+                mag.softReset();
                 delay(1000);
                 status = mag.begin(mag_cs, SPI1);
             }
@@ -225,6 +232,7 @@ class Sensors{
             // q = magRot.rotate(q);
             q = allRot.rotate(q);
             return Vec3(q.b, q.c, q.d);
+            // return Vec3(0, 0, 0);
         }
 
 
@@ -265,125 +273,6 @@ class Sensors{
         float readPyroBatteryVoltage() {
             return 4.0 * ((float) analogRead(pyroBatteryPin) * (3.3 / 1024.0));
         }
-
-
-        void beginSD(minerva_II_packet packet) {
-            delay(1000);
-            byte attempts = 1;
-            while (attempts <= 10) {
-                if (!sd.begin(SdioConfig(FIFO_SDIO))) {
-                    packet.status |= 1<<7;
-                    Serial.print("SD Begin Failed, Attempting "); Serial.print(10 - attempts++); Serial.println(" more tries ...");
-                    delay(1000);
-                } else {
-                    packet.status &= ~(1<<7);
-                    Serial.println("\nFIFO SDIO mode.");
-
-                    // Enumerates File Name
-                    while (sd.exists(fileName)) {
-                        if (fileName[BASE_NAME_SIZE + 3] != '9') {
-                            fileName[BASE_NAME_SIZE + 3]++;
-                        } else if (fileName[BASE_NAME_SIZE + 2] != '9') {
-                            fileName[BASE_NAME_SIZE + 3] = '0';
-                            fileName[BASE_NAME_SIZE + 2]++;
-                        } else if (fileName[BASE_NAME_SIZE + 1] != '9') {
-                            fileName[BASE_NAME_SIZE + 2] = '0';
-                            fileName[BASE_NAME_SIZE + 3] = '0';
-                            fileName[BASE_NAME_SIZE + 1]++;
-                        } else if (fileName[BASE_NAME_SIZE] != '9') {
-                            fileName[BASE_NAME_SIZE + 1] = '0';
-                            fileName[BASE_NAME_SIZE + 2] = '0';
-                            fileName[BASE_NAME_SIZE + 3] = '0';
-                            fileName[BASE_NAME_SIZE]++;
-                        } else {
-                            Serial.println("Can't create file name");
-                        }
-                    }
-
-                    f = sd.open(fileName, FILE_WRITE);
-                    Serial.print("Writing to: ");
-                    Serial.println(fileName);
-                    if (!f) {
-                        packet.status |= 1<<7;
-                        Serial.println("Failed opening file.");
-                        break;
-                    }
-                    sdexists = true;
-                    break;
-                }
-            }
-        }
-
-        void logBinaryPacket(const void* packet, size_t bytes) {
-            f.write((const uint8_t *)packet, bytes);
-        }
-
-        void logPacket(const minerva_II_packet packet) {
-            f.print(packet.magic); f.print(","); 
-            f.print(packet.status); f.print(","); 
-            f.print(packet.time_us); f.print(",");
-            f.print(packet.main_voltage_v); f.print(",");
-            f.print(packet.pyro_voltage_v); f.print(",");
-            f.print(packet.numSatellites); f.print(",");
-            f.print(packet.gpsFixType); f.print(",");
-            f.print(packet.latitude_degrees, 5); f.print(",");
-            f.print(packet.longitude_degrees, 5); f.print(",");
-            f.print(packet.gps_hMSL_m); f.print(",");
-            f.print(packet.barometer_hMSL_m); f.print(",");
-            f.print(packet.temperature_c); f.print(",");
-            f.print(packet.acceleration_x_mss, 3); f.print(",");
-            f.print(packet.acceleration_y_mss, 3); f.print(",");
-            f.print(packet.acceleration_z_mss, 3); f.print(",");
-            f.print(packet.angular_velocity_x_rads, 3); f.print(",");
-            f.print(packet.angular_velocity_y_rads, 3); f.print(",");
-            f.print(packet.angular_velocity_z_rads, 3); f.print(",");
-            f.print(packet.gauss_x, 3); f.print(",");
-            f.print(packet.gauss_y, 3); f.print(",");
-            f.print(packet.gauss_z, 3); f.print(",");
-            f.print(packet.kf_acceleration_mss, 3); f.print(",");
-            f.print(packet.kf_velocity_ms, 3); f.print(",");
-            f.print(packet.kf_position_m, 3); f.print(",");
-            f.print(packet.w, 3); f.print(",");
-            f.print(packet.x, 3); f.print(",");
-            f.print(packet.y, 3); f.print(",");
-            f.print(packet.z, 3); f.print(",");
-            f.print(packet.checksum); f.print(",");
-            f.println();
-        }
-
-        void printPacket(const minerva_II_packet packet) {
-            Serial.print(packet.magic); Serial.print("\t"); 
-            Serial.print(packet.status); Serial.print("\t"); 
-            Serial.print(packet.time_us); Serial.print("\t");
-            Serial.print(packet.main_voltage_v); Serial.print("\t");
-            Serial.print(packet.pyro_voltage_v); Serial.print(",");
-            Serial.print(packet.numSatellites); Serial.print("\t");
-            Serial.print(packet.gpsFixType); Serial.print("\t");
-            Serial.print(packet.latitude_degrees); Serial.print("\t");
-            Serial.print(packet.longitude_degrees); Serial.print("\t");
-            Serial.print(packet.gps_hMSL_m); Serial.print("\t");
-            Serial.print(packet.barometer_hMSL_m); Serial.print("\t");
-            Serial.print(packet.temperature_c); Serial.print("\t");
-            Serial.print(packet.acceleration_x_mss); Serial.print("\t");
-            Serial.print(packet.acceleration_y_mss); Serial.print("\t");
-            Serial.print(packet.acceleration_z_mss); Serial.print("\t");
-            Serial.print(packet.angular_velocity_x_rads); Serial.print("\t");
-            Serial.print(packet.angular_velocity_y_rads); Serial.print("\t");
-            Serial.print(packet.angular_velocity_z_rads); Serial.print("\t");
-            Serial.print(packet.gauss_x); Serial.print("\t");
-            Serial.print(packet.gauss_y); Serial.print("\t");
-            Serial.print(packet.gauss_z); Serial.print("\t");
-            Serial.print(packet.kf_acceleration_mss); Serial.print("\t");
-            Serial.print(packet.kf_velocity_ms); Serial.print("\t");
-            Serial.print(packet.kf_position_m); Serial.print("\t");
-            Serial.print(packet.w); Serial.print("\t");
-            Serial.print(packet.x); Serial.print("\t");
-            Serial.print(packet.y); Serial.print("\t");
-            Serial.print(packet.z); Serial.print("\t");
-            Serial.print(packet.checksum); Serial.print("\t");
-            Serial.println();
-        }
-
 
     private:
 

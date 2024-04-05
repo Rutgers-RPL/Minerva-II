@@ -1,3 +1,14 @@
+/**
+ * @file state.cpp
+ * @author Shivam Patel (shivam.patel94@rutgers.edu)
+ * @brief Outlines the functions and variables realted to detecting flight state events.
+ * @version 1.1
+ * @date 2024-04-04
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef State_H
 #define State_H
 
@@ -8,13 +19,19 @@
 #include <structs.h>
 #include "math.h"
 
+#define ARMED 1<<0
+#define REACHED_ARMING_ALTITUDE 1<<1
+#define REACHED_ARMING_VELOCITY 1<<2
+#define REACHED_ARMING_ACCELERATION 1<<3
+#define REACHED_ARMING_DELAY 1<<4
+#define REACHED_APOGEE 1<<5
+#define FIRED_DROGUE 1<<6
+#define FIRED_MAIN 1<<7
+#define FIRED_SUSTAINER 1<<8
+
+
 class State{
     public:
-        // Quaternion orientation;
-        // double acc_z;
-        // double vel_z;
-        // double pos_z;
-
         double last_alt;
         double init_alt;
 
@@ -22,18 +39,23 @@ class State{
         Pyro* main_channel;
         Pyro* sus_channel;
 
-        State(double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
-        void init(double curr_alt);
+        State(double arm_time, double arm_alt, double  arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust);
+        void init();
         uint16_t update(double acc, double vel, double alt, elapsedMillis pyro_time, uint32_t curr_time);
         uint16_t fetch();
         state_packet dump();
         bool armed();
-
+        bool checkState(u_int8_t flag);
+        
+        
+        static bool checkState(state_packet packet, uint8_t flag);
+        
     private:
         // arming conditions
         double arming_altitude;
         double arming_vel;
         double arming_acc;
+        double arming_delay;
 
         // deploy conditins
         double drogue_delay;
@@ -51,11 +73,11 @@ class State{
         state & (1 << 1) -> reached arming altitude
         state & (1 << 2) -> reached arming velocity
         state & (1 << 3) -> reached arming acceleration
-        state & (1 << 4) -> reached apogee
-        state & (1 << 5) -> fired drogue
-        state & (1 << 6) -> fired main
-        state & (1 << 7) -> fired sustainer (not used [yet])
-        state & (1 << 8) -> 
+        state & (1 << 4) -> reached arming delay time
+        state & (1 << 5) -> reached apogee
+        state & (1 << 6) -> fired drogue
+        state & (1 << 7) -> fired main
+        state & (1 << 8) -> fired sustainer (not used [yet])
         state & (1 << 9) -> 
         state & (1 << 10) -> 
         state & (1 << 11) -> 
@@ -72,6 +94,8 @@ class State{
         u_int32_t drogue_time;
         u_int32_t main_time;
         u_int32_t sus_time;
+
+        void setState(uint8_t flag);
 
 };
 

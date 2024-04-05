@@ -2,10 +2,10 @@
  * @file main.cpp
  * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
  * @brief This runs the main data collection, processing, and transmission loop for the Minerva II flight computer
- * @version 1.0
- * @date 2022-09-14
+ * @version 1.2
+ * @date 2024-04-04
  * 
- * @copyright Copyright (c) 2022
+ * @copyright Copyright (c) 2024
  * 
  */
 
@@ -21,6 +21,7 @@
 #include <MadgwickAHRS.h>
 #include <pyro.h>
 #include <state.h>
+#include <logging.h>
 
 #define _g_ (9.80665)
 
@@ -38,6 +39,7 @@ float radioHZ = 10;
 #define sdSaveHZ 10
 
 minerva_II_packet packet;
+minerva_II_packet test_packet;
 
 FastCRC32 CRC32;
 
@@ -90,8 +92,18 @@ Pyro p3 = Pyro(PYRO3_FIRE, PYRO3_CONN, 26, 25);
 Sensors sen;
 KalmanFilter kf;
 
-State state = State(100, 35, 15, 0.1, 600, p1, p2, p3);
+Logging logger(packet);
+
+const double arming_time_delay = 1.8E8;
+const double arming_altitude = 100;
+const double arming_velocity = 35;
+const double arming_acceleration = 15;
+const double drogue_delay = 0.1;
+const double main_deploy_altitude = 600;
+State state = State(arming_time_delay, arming_altitude, arming_velocity, arming_acceleration, drogue_delay, main_deploy_altitude, p1, p2, p3);
 u_int16_t stateFlags;
+
+bool camOn = false;
 
 void printPVTData(UBX_NAV_PVT_data_t *ubxDataStruct){
   gpsCount++;
@@ -130,12 +142,11 @@ void gyroInterruptHandler() {
 void setup() {
   packet.magic = magic;
   Serial.begin(115200);
-  Serial2.begin(115200);
+  Serial2.begin(115200, SERIAL_8E1);
   Serial.flush();
   Serial2.flush();
 
   sen.init(packet);
-  sen.beginSD(packet);
 
   byte attempts = 1;
   while (!gps.setAutoPVTcallbackPtr(&printPVTData) && attempts <= 10) {
@@ -155,11 +166,11 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(baro_int_pin), baroInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(mag_int_pin), magInterruptHandler, RISING);
   attachInterrupt(digitalPinToInterrupt(acc_int_pin), accInterruptHandler, RISING);
-  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING); 
+  attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING);
 
   initialAltitude = sen.readAltitude();
 
-  state.init(initialAltitude);
+  state.init();
   stateFlags = state.fetch();
 
   Serial.print("Running Main Loop.");
@@ -208,6 +219,7 @@ void loop() {
   }
 
   if (acc_interrupt && gyro_interrupt && mag_interrupt) {
+  // if (acc_interrupt && gyro_interrupt && true) { <- NO MAG
     mag.clearMeasDoneInterrupt();
     acc_interrupt = false;
     gyro_interrupt = false;
@@ -216,10 +228,9 @@ void loop() {
     gCount++;
     mCount++;
     Vec3 magVec = sen.readMag();
+    // Vec3 magVec = Vec3(0,0,0); <- NO MAG
     Vec3 accVec = sen.readAccel();
     Vec3 gyrVec = sen.readGyro();
-    // thisahrs.update(accVec,gyrVec,magVec);
-    // orientation = thisahrs.q;
 
     packet.acceleration_x_mss = accVec.x;
     packet.acceleration_y_mss = accVec.y;
@@ -235,10 +246,13 @@ void loop() {
     packet.x = AHRS.q1;
     packet.y = AHRS.q2;
     packet.z = AHRS.q3;
-    // packet.w = orientation.a;
-    // packet.x = orientation.b;
-    // packet.y = orientation.c;
-    // packet.z = orientation.d;
+
+    // NO MAG
+    // packet.w = 0;
+    // packet.x = 0;
+    // packet.y = 0;
+    // packet.z = 0;
+
     Quaternion q;
     q.a = packet.w;
     q.b = packet.x;
@@ -256,32 +270,19 @@ void loop() {
   }
 
   u_int16_t newStateFlags = state.update(packet.kf_acceleration_mss, packet.kf_velocity_ms, packet.kf_position_m, pyroMillis, mainTime);
-  if (stateFlags != newStateFlags)
-  {
-    state_packet s_packet = state.dump();
-    sen.logBinaryPacket(&s_packet, sizeof(state_packet));
-  }
+  state_packet s_packet = state.dump();
 
-  if (file_log_time >= (1000000.0 / sdLogHZ)) {
-    file_log_time = 0;
-    if (sen.sdexists && sen.f) {
-      packet.status &= ~(1<<7);
-      //sen.logPacket(packet);
-      sen.logBinaryPacket(&packet, sizeof(minerva_II_packet));
-    } else {
-      // sets 1st bit of code to true
-      packet.status |= (1<<7);
-    }
-    
+  logger.logBinaryPacket(&(s_packet));
+
+  if(!camOn && state.checkState(REACHED_ARMING_ACCELERATION))
+  {
+    camOn = true;
+    p0.fire(pyroMillis, 10*60*1000);
   }
+  stateFlags = newStateFlags;
 
   packet.main_voltage_v = sen.readBatteryVoltage();
   packet.pyro_voltage_v = sen.readPyroBatteryVoltage();
-
-  if (sen.sdexists && file_flush_time >= (1000000.0 / sdSaveHZ)) {
-    file_flush_time = 0;
-    sen.f.flush();
-  }
 
   if (printTime >= 50000) {
     printTime = 0;
@@ -374,7 +375,9 @@ void loop() {
       if (strcmp(message, "CAM") == 0) {
         // 10 minutes
         p0.fire(pyroMillis, 10*60*1000);
-        p2.fire(pyroMillis, 10*60*1000);
+        //p3.fire(pyroMillis, 10*60*1000);
+        camOn = true;
+
       }
       if (strcmp(message, "FUL") == 0) {
         radioHZ = 10;
@@ -389,11 +392,16 @@ void loop() {
   p1.update(&packet, pyroMillis);
   p2.update(&packet, pyroMillis);
   p3.update(&packet, pyroMillis);
- if (packetTime >= 1000000.0 / radioHZ) {
-  packetTime = 0;
+
+
   packet.checksum = CRC32.crc32((const uint8_t *)&packet+sizeof(short), sizeof(minerva_II_packet) - 6);
-  Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
-  Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
- }
+
+  logger.logBinaryPacket(&packet);
+
+  if (packetTime >= 1000000.0 / radioHZ) {
+    packetTime = 0;
+    Serial2.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+    Serial.write((const uint8_t *)&packet, sizeof(minerva_II_packet));
+  }
  tCount++;
 }
