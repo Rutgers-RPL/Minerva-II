@@ -11,6 +11,9 @@
 
 #include "state.h"
 
+
+//setter! Assign packet values figma
+
 State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust)
 {
     this->arming_acc = arm_acc;
@@ -32,35 +35,43 @@ State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, do
     this->sus_channel = &sust;
 };
 
-void State::init()
-{
-    this->init_alt = 0;
-    this->last_alt = 0;
-    this->arming_altitude = this->arming_altitude;
 
-}
 
+//takes all necessary data to update (acc, vel, alt) all at once
 uint16_t State::update(double acc, double vel, double alt, elapsedMillis pyro_time, uint32_t curr_time)
 {
+    
+    //if not in armed state
     if(!this->armed())
     {
+        //utilizing bitmask
+
+        //if arming altitude bit isn't flagged ON and the arming altitude has been passed
         if((!this->checkState(REACHED_ARMING_ALTITUDE)) && alt > this->arming_altitude)
         {
+            //flip the bit
             this->setState(REACHED_ARMING_ALTITUDE);
         }
+        //if arming velocity hasn't been flagged ON and the arming velocity has been reached
         if((!this->checkState(REACHED_ARMING_VELOCITY)) && vel > this->arming_vel)
         {
+            //flip the bit
             this->setState(REACHED_ARMING_VELOCITY);
         }
+        //If the arming acceleration bit isn't flagged ON and the arming acceleration has been reached
         if((!this->checkState(REACHED_ARMING_ACCELERATION)) && acc > this->arming_acc)
         {
+            //flip the bit
             this->setState(REACHED_ARMING_ACCELERATION);
         }
+        //arming delay: the time between when a command is issued and when it is executed.
+        //if it's been long enough to execute the arming command, and the flag isn't raised yet,
         if((!this->checkState(REACHED_ARMING_DELAY)) && curr_time > this->arming_delay)
         {
+            //raise the flag to execute the command (flag indicates that arming delay has been reached)
             this->setState(REACHED_ARMING_DELAY);
         }
-
+//
         if(this->state == 0b11110)
         {
             this->setState(ARMED);
@@ -78,7 +89,7 @@ uint16_t State::update(double acc, double vel, double alt, elapsedMillis pyro_ti
             this->main_time = curr_time;
         }
 
-        if((!this->checkState(FIRED_DROGUE)) && (vel < 2 && vel > 2)) // velocity condition + sanity check
+        if((!this->checkState(FIRED_DROGUE)) && (vel < 2 && vel > -2)) // velocity condition + sanity check
         {
             this->apg_detection_sum++;
         }
@@ -87,7 +98,7 @@ uint16_t State::update(double acc, double vel, double alt, elapsedMillis pyro_ti
             this->apg_detection_sum--;
         }
 
-        if((!this->checkState(REACHED_APOGEE)) && ((exp(0.2*this->apg_detection_sum)-1)/(exp(0.2*this->apg_detection_sum)+1) > 0.8)) // needs approx 11 net "good" datapoints
+        if((!this->checkState(REACHED_APOGEE)) && (this->apg_detection_sum > 11)) // needs approx 11 net "good" datapoints
         {
             // say that drogue should deploy using state, then once there have been enough elapsed millis, check to fire channel if drogue_deploy time is still 0
             this->setState(REACHED_APOGEE);
@@ -107,19 +118,23 @@ uint16_t State::update(double acc, double vel, double alt, elapsedMillis pyro_ti
 
 };
 
+//getter
 uint16_t State::fetch()
 {
     return this->state;
 };
 
+//function to return arming state (checks first bit)
 bool State::armed(){
     return (bool) (this->state & ARMED);
 }
 
+//checks bit at given flag 
 bool State::checkState(u_int8_t flag)
 {
     return (bool) (this->state & flag);
 }
+
 
 static bool checkState(state_packet packet, uint8_t flag)
 {
