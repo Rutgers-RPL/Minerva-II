@@ -12,13 +12,15 @@
 #include "state.h"
 
 
-//setter! Assign packet values figma
+//constructor
 
 State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, double del_drogue, double dep_main_alt, Pyro drogue, Pyro main, Pyro sust)
 {
     this->arming_acc = arm_acc;
     this->arming_vel = arm_vel;
     this->arming_delay = arm_time;
+
+    this->arming_altitude = arm_alt;
 
     this->drogue_delay = del_drogue;
     this->main_alt = dep_main_alt+arm_alt;
@@ -118,7 +120,7 @@ uint16_t State::update(double acc, double vel, double alt, elapsedMillis pyro_ti
 
 };
 
-//getter
+//fetch state
 uint16_t State::fetch()
 {
     return this->state;
