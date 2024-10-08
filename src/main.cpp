@@ -169,8 +169,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gyro_int_pin), gyroInterruptHandler, RISING);
 
   initialAltitude = sen.readAltitude();
-
-  state.init();
   stateFlags = state.fetch();
 
   Serial.print("Running Main Loop.");
