@@ -16,10 +16,10 @@ Logging::Logging(minerva_II_packet packet)
     delay(1000);
     byte attempts = 1;
     this->sdExists = false;
-    while (attempts <= 10 && !this->sdExists) {
+    while (attempts <= 5 && !this->sdExists) {
         if (!this->sd.begin(SdioConfig(FIFO_SDIO))) {
             packet.status |= 1<<7;
-            Serial.print("SD Begin Failed, Attempting "); Serial.print(10 - attempts++); Serial.println(" more tries ...");
+            Serial.print("SD Begin Failed, Attempting "); Serial.print(5 - attempts++); Serial.println(" more tries ...");
             delay(1000);
         } else {
             packet.status &= ~(1<<7);
@@ -49,10 +49,6 @@ Logging::Logging(minerva_II_packet packet)
             this->sdExists = true;
         }
     }
-
-    this->max_acc = 0;
-    this->max_vel = 0;
-    this->max_alt = 0;
 
     this->bufferCount = 0;
 };

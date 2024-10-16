@@ -1,7 +1,7 @@
 /**
  * @file structs.h
  * @author Shivam Patel (shivam.patel94@rutgers.edu), Carlton Wu (carlton.wu@rutgers.edu)
- * @brief Outlines the data packets for recording and transmitting glight data
+ * @brief Outlines the data packets for recording and transmitting flight data
  * @version 1.1
  * @date 2024-04-04
  * 

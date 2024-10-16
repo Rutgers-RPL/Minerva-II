@@ -1,7 +1,7 @@
 /**
  * @file logging.h
  * @author Shivam Patel (shivam.patel94@rutgers.edu)
- * @brief Outlines the functions and variables necessary to manange data logging
+ * @brief Outlines the functions and variables necessary to manage data logging
  * @version 1.0
  * @date 2024-04-04
  * 
@@ -20,9 +20,6 @@
 
 #define DATA_FILE_BASE_NAME String("FlightLog_")
 #define DATA_FILE_BASE_TYPE String(".bin")
-#define SUMMARY_FILE_BASE_NAME String("FlightSummary_")
-#define SUMMARY_FILE_BASE_TYPE String(".txt")
-#define BASE_NAME_SIZE (sizeof(FILE_BASE_NAME) - 1)
 #define LOGGING_BUFFER_SIZE 50 // leq 255
 
 class Logging{
@@ -54,16 +51,6 @@ class Logging{
 
     private:
         u_int8_t bufferCount;
-        u_int8_t updateCount;
-
-        char maxSummary[128];
-        char eventsSummary[256];
-
-        void updateSummary(const minerva_II_packet packet1, const state_packet packet2);
-
-        float max_alt;
-        float max_vel;
-        float max_acc;
 };
 
 
