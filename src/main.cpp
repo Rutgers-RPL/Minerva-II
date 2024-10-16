@@ -35,6 +35,7 @@
 #define PYRO3_CONN 14
 
 float radioHZ = 10;
+
 #define sdLogHZ 500
 #define sdSaveHZ 10
 
@@ -75,8 +76,7 @@ bool firstGPS = true;
 
 float initialAltitude = 0.0;
 float initialHMSL = 0.0;
-elapsedMicros file_flush_time;
-elapsedMicros file_log_time;
+
 elapsedMicros printTime;
 elapsedMicros kfTime;
 elapsedMicros packetTime;
