@@ -174,4 +174,4 @@ The flight logic uses a 16-bit bitmask for space efficient state tracking:
 
 ## License
 
-&copy; 2021-2025 Shivam Patel and Carlton Wu. All rights reserved.
+&copy; 2021-2025 Rutgers Rocket Propulsion Lab. All rights reserved.
