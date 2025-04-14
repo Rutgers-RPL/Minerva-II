@@ -73,7 +73,7 @@ Implements the state machine for flight logic:
 - Apogee detection via velocity near zero
 - Time-delayed deployment of drogue and main parachutes
 
-### 📦 `Kalman Filter` (`kf.h`)
+### `Kalman Filter` (`kf.h`)
 
 Provides basic 3-state Kalman filtering to estimate:
 
@@ -83,7 +83,7 @@ Provides basic 3-state Kalman filtering to estimate:
 
 Used to smooth noisy barometer and accelerometer readings.
 
-### 💾 `Logging` Class (`logging.cpp/.h`)
+### `Logging` Class (`logging.cpp/.h`)
 
 Manages:
 
@@ -92,7 +92,7 @@ Manages:
 - Buffering to optimize SD writes
 - Also prints packets for debugging purposes
 
-### 🧱 `structs.h`
+### `structs.h`
 
 Defines key data structures:
 
