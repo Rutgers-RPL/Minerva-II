@@ -35,6 +35,7 @@ State::State(double arm_time, double arm_alt, double arm_vel, double arm_acc, do
     this->drogue_channel = &drogue;
     this->main_channel = &main;
     this->sus_channel = &sust;
+    this->apg_detection_sum = 0;
 };
 
 
